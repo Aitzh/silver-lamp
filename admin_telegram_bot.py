@@ -78,7 +78,7 @@ class Database:
     def get_connection(self):
         return sqlite3.connect(self.db_path)
     
-    def generate_code(self, code_type, generated_by, max_activations=None):
+    def generate_code(self, code_type, generated_by, max_activations=1):
         """
         Генерация кода с ЕДИНОЙ логикой
         max_activations = 1 для одноразового

@@ -55,11 +55,14 @@ router.post("/verify", async (req, res) => {
             }
         }
 
-        // Проверка лимита активаций
-        if (accessCode.current_activations >= accessCode.max_activations) {
+        // Используем 1 как значение по умолчанию, если max_activations равен NULL
+        const maxActs = accessCode.max_activations || 1;
+        const currentActs = accessCode.current_activations || 0;
+
+        if (currentActs >= maxActs) {
             return res.status(401).json({
                 success: false,
-                error: `Лимит активаций достигнут (${accessCode.max_activations}/${accessCode.max_activations})`
+                error: `Лимит активаций достигнут (${currentActs}/${maxActs})`
             });
         }
 

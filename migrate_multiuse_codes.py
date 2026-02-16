@@ -59,11 +59,13 @@ def migrate():
             print("✓ Поле current_activations уже существует")
         
         if changes_made:
-            # Обновляем существующие одноразовые коды
+            # Обновляем существующие коды: ставим лимит 1 и текущие активации
             print("🔧 Обновляем существующие коды...")
             cursor.execute('''
                 UPDATE access_codes 
-                SET current_activations = CASE WHEN is_used = 1 THEN 1 ELSE 0 END
+                SET 
+                    max_activations = 1,
+                    current_activations = CASE WHEN is_used = 1 THEN 1 ELSE 0 END
                 WHERE max_activations IS NULL
             ''')
             
