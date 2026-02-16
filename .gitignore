@@ -1,0 +1,18 @@
+# Зависимости Node.js (самые тяжелые папки)
+node_modules/
+package-lock.json
+
+# Базы данных (их не стоит хранить в Git, там ваши данные)
+*.db
+*.save
+
+# Окружение Python и кэш
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Логи и конфиги с секретами
+.env
+logs/
+*.log

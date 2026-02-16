@@ -1,0 +1,882 @@
+/* --- 1. Variables (Strict Luxury Palette) --- */
+:root {
+    /* DARK THEME (Default) */
+    --bg-body: #0F0A07; /* Deep Black-Brown */
+    
+    /* Карточка: Сверху светлее (лампа), снизу темнее */
+    --card-bg: linear-gradient(180deg, rgba(45, 31, 24, 0.85) 0%, rgba(15, 10, 7, 0.95) 100%);
+    
+    --glass-border: rgba(212, 165, 116, 0.25); /* Thin gold border */
+    --accent: #D4A574; /* Gold/Coffee */
+    --accent-glow: #E8B923;
+    
+    --text-main: #F5E6D3;
+    --text-muted: #B89F8A;
+    
+    --card-shadow: 0 32px 64px rgba(0,0,0,0.6);
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Inter', sans-serif;
+
+    /* Easing для плавных анимаций */
+    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"] {
+    /* LIGHT THEME (Warm Cream Beige - НОВАЯ ПАЛИТРА) */
+    --bg-body: #F5EDE2; /* Кремовый бежевый фон */
+    
+    /* Карточка: Полупрозрачный теплый, с легким градиентом для объема */
+    --card-bg: linear-gradient(180deg, rgba(255, 248, 240, 0.9) 0%, rgba(255, 248, 240, 0.8) 100%);
+    
+    --glass-border: rgba(212, 165, 116, 0.4); /* Теплый бордер */
+    --accent: #B89F8A; /* Мягкий золотисто-коричневый */
+    --accent-glow: #D4A574;
+    
+    --text-main: #3E2F1F; /* Тёмно-коричневый текст */
+    --text-muted: #8A7A6D;
+    
+    --card-shadow: 0 32px 64px rgba(62, 47, 31, 0.15);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
+body {
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    margin: 0; min-height: 100vh;
+    display: flex; justify-content: center; align-items: center;
+    padding: 20px;
+    transition: background 0.5s var(--ease-smooth); /* Плавная смена фона */
+}
+
+/* --- 2. Main Card (Glassmorphism + Depth) --- */
+.app-container {
+    width: 100%; max-width: 900px;
+    background: var(--card-bg);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    /* Верхний блик (свет лампы) */
+    border-top: 1px solid rgba(255,255,255,0.15);
+    border-radius: 32px;
+    padding: 60px;
+    box-shadow: var(--card-shadow);
+    position: relative; overflow: hidden;
+    transition: all 0.5s var(--ease-smooth);
+}
+
+[data-theme="light"] .app-container {
+    border-top-color: rgba(255,255,255,0.5); /* Блик ярче в светлой теме */
+}
+
+/* Эффект прожектора сверху (Свечение) */
+.app-container::before {
+    content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 100%;
+    background: radial-gradient(circle at top center, rgba(212, 165, 116, 0.15) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+}
+[data-theme="light"] .app-container::before {
+    background: radial-gradient(circle at top center, rgba(255, 248, 240, 0.5) 0%, transparent 60%);
+}
+
+/* --- 3. Header --- */
+.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; position: relative; z-index: 2; }
+
+.lang-switcher { background: rgba(128,128,128,0.1); padding: 4px; border-radius: 30px; display: flex; gap: 4px; }
+.lang-btn {
+    background: transparent; border: none; color: var(--text-muted);
+    padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    cursor: pointer; 
+    transition: all 0.4s var(--ease-smooth); /* Плавность */
+}
+.lang-btn.active { background: var(--accent); color: #0F0A07; font-weight: 700; }
+[data-theme="light"] .lang-btn.active { color: #fff; }
+
+.theme-toggle { background: transparent; border: none; cursor: pointer; color: var(--text-muted); transition: color 0.4s var(--ease-smooth); }
+.theme-toggle:hover { color: var(--accent); }
+.toggle-track { display: flex; align-items: center; gap: 10px; }
+.theme-toggle i { transition: transform 0.5s var(--ease-smooth), opacity 0.5s var(--ease-smooth); }
+[data-theme="dark"] .icon-sun { opacity: 0.3; transform: scale(0.8); }
+[data-theme="dark"] .icon-moon { color: var(--accent); transform: scale(1.1); }
+[data-theme="light"] .icon-sun { color: var(--accent); transform: scale(1.1); }
+[data-theme="light"] .icon-moon { opacity: 0.3; transform: scale(0.8); }
+
+/* --- 4. Typography --- */
+.hero-section { text-align: center; margin-bottom: 50px; position: relative; z-index: 2; }
+.brand-title {
+    font-family: var(--font-heading); font-size: 56px; margin: 0;
+    background: linear-gradient(90deg, var(--accent), var(--text-main));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px rgba(212, 165, 116, 0.2));
+}
+.brand-subtitle { font-size: 18px; color: var(--text-muted); margin-top: 12px; font-weight: 300; letter-spacing: 0.5px; }
+
+/* --- 5. Navigation Tabs (Solid & Glowing) --- */
+.main-nav { display: flex; justify-content: center; gap: 16px; margin-bottom: 40px; position: relative; z-index: 2; }
+/* --- Navigation Tabs (Smooth Fix) --- */
+.nav-item {
+    position: relative;
+    background: rgba(255,255,255,0.03); 
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted); 
+    padding: 12px 24px; border-radius: 50px;
+    font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; 
+    overflow: hidden; z-index: 1;
+    transition: transform 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* Скрытый слой */
+.nav-item::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-glow));
+    opacity: 0; z-index: -1;
+    transition: opacity 0.5s ease;
+}
+
+.nav-item:hover { transform: translateY(-2px); border-color: var(--accent); }
+
+/* Найди и замени блок .nav-item.active */
+.nav-item.active {
+    /* УБИРАЕМ: background: linear-gradient(...) */
+    
+    /* ДОБАВЛЯЕМ: Стиль стекла */
+    background: rgba(212, 165, 116, 0.1); /* Легкий золотой тинт внутри */
+    border: 1px solid var(--accent);      /* Золотая обводка */
+    color: var(--accent);                 /* Золотой текст */
+    font-weight: 600;
+    
+    /* Мягкое свечение, а не жесткая тень */
+    box-shadow: 0 0 20px rgba(212, 165, 116, 0.2), inset 0 0 10px rgba(212, 165, 116, 0.05);
+}
+
+/* Для светлой темы */
+[data-theme="light"] .nav-item.active {
+    color: var(--text-main); /* Или темно-коричневый */
+    border-color: var(--accent);
+    background: rgba(184, 159, 138, 0.2);
+}
+
+.divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-border), transparent); margin-bottom: 40px; opacity: 0.5; }
+
+/* --- 6. Coffee Cards (Animated) --- */
+.header-title { font-size: 13px; letter-spacing: 2px; color: var(--accent); font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 20px; }
+.coffee-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 48px; position: relative; z-index: 2; }
+
+/* --- Coffee Cards (Smooth Fix) --- */
+.coffee-card {
+    position: relative;
+    background: rgba(255,255,255,0.02); 
+    border: 1px solid var(--glass-border);
+    padding: 20px; border-radius: 20px; cursor: pointer;
+    display: flex; align-items: center; gap: 10px; 
+    overflow: hidden; z-index: 1;
+    transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* Скрытый слой для фона активного кофе */
+.coffee-card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(212, 165, 116, 0.15); /* Цвет активного фона */
+    opacity: 0; z-index: -1;
+    transition: opacity 0.6s ease; /* Еще медленнее для атмосферности */
+}
+
+.coffee-card span, .coffee-card i { transition: color 0.4s ease, transform 0.4s ease; }
+
+.coffee-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+
+.coffee-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.coffee-card.active::before { opacity: 1; }
+
+.coffee-card.active i { color: var(--accent); transform: scale(1.1); }
+
+/* Steam Animation - Мягче */
+.steam-container { position: absolute; top: 10px; width: 100%; height: 100%; pointer-events: none; }
+.steam-container span {
+    position: absolute; background: var(--text-main); width: 2px; height: 15px;
+    left: 50%; bottom: 60%; border-radius: 5px; filter: blur(4px); opacity: 0;
+}
+.coffee-card.active .steam-container span { animation: steamRise 3s infinite ease-in-out; } /* Медленнее и плавнее */
+.steam-container span:nth-child(2) { animation-delay: 0.6s; margin-left: 8px; height: 10px; }
+@keyframes steamRise { 0% { transform: translateY(0); opacity: 0; } 50% { opacity: 0.3; } 100% { transform: translateY(-40px); opacity: 0; } }
+
+/* --- 7. Filters (Chips - Clean & Smooth) --- */
+.filters-container { display: flex; flex-direction: column; gap: 40px; margin-bottom: 48px; animation: fadeIn 0.8s var(--ease-smooth); position: relative; z-index: 2; }
+.filter-group { display: flex; flex-direction: column; gap: 16px; }
+
+.chips-row {
+    display: flex; flex-wrap: wrap; /* Wrap is essential */
+    gap: 12px 16px; /* Space between chips */
+}
+
+/* --- Chips (Smooth Gradient Fix) --- */
+.chip {
+    position: relative; /* Важно для позиционирования слоя */
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.03); /* Базовый фон */
+    border: 1px solid var(--glass-border);
+    border-radius: 50px;
+    padding: 12px 24px;
+    font-size: 15px; font-weight: 500; color: var(--text-main);
+    cursor: pointer;
+    overflow: hidden; /* Чтобы градиент не вылезал */
+    z-index: 1; /* Текст должен быть сверху */
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.4s ease, box-shadow 0.4s ease; /* Убрали background из транзиции */
+}
+
+/* СОЗДАЕМ СКРЫТЫЙ СЛОЙ С ГРАДИЕНТОМ */
+.chip::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-glow)); /* Тот самый градиент */
+    opacity: 0; /* Скрыт по умолчанию */
+    z-index: -1; /* Под текстом */
+    transition: opacity 0.5s ease; /* Плавное появление */
+}
+
+.chip:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+}
+
+/* --- СТИЛЬ АКТИВНОГО ЧИПА (PREMIUM GLASS) --- */
+
+.chip.active {
+    /* Фон: прозрачный с легким золотым оттенком */
+    background: rgba(212, 165, 116, 0.15) !important;
+    
+    /* Рамка: Золотая */
+    border-color: var(--accent) !important;
+    
+    /* Текст: Золотой */
+    color: var(--accent) !important;
+    
+    /* Свечение */
+    box-shadow: 0 0 20px rgba(212, 165, 116, 0.3);
+    font-weight: 600;
+}
+
+/* ВАЖНО: Скрываем старый слой с желтым градиентом, 
+   чтобы кнопка не была сплошной */
+.chip.active::before {
+    opacity: 0 !important; 
+}
+
+/* Для светлой темы: темный текст, чтобы читалось */
+[data-theme="light"] .chip.active {
+    background: rgba(184, 159, 138, 0.2) !important;
+    border-color: var(--accent) !important;
+    color: #3E2F1F !important;
+}
+
+/* Красные чипы (Исключения) — тоже делаем стеклянными */
+.chip.multi.active {
+    background: rgba(229, 80, 80, 0.15) !important;
+    border-color: #E55050 !important;
+    color: #ff7b7b !important;
+    box-shadow: 0 0 15px rgba(229, 80, 80, 0.25);
+}
+/* Скрываем градиент и для красных */
+.chip.multi.active::before {
+    opacity: 0 !important;
+}
+
+
+
+/* --- 8. CTA --- */
+.action-area { text-align: center; position: relative; z-index: 2; }
+.cta-btn {
+    background: linear-gradient(135deg, var(--accent), var(--accent-glow));
+    border: none; padding: 22px 64px; border-radius: 50px;
+    color: #0F0A07; font-size: 18px; font-weight: 700; letter-spacing: 0.5px;
+    cursor: pointer; 
+    transition: all 0.5s var(--ease-smooth); /* Очень плавная кнопка */
+    width: 100%; max-width: 400px;
+    box-shadow: 0 15px 35px rgba(212,165,116,0.25);
+}
+[data-theme="light"] .cta-btn { color: #fff; box-shadow: 0 15px 35px rgba(184, 159, 138, 0.3); }
+
+.cta-btn:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 25px 50px rgba(212,165,116,0.5); }
+
+.footer-note { font-size: 13px; color: var(--text-muted); margin-top: 24px; opacity: 0.7; transition: color 0.5s var(--ease-smooth); }
+.loader { display: none; width: 24px; height: 24px; border: 3px solid rgba(0,0,0,0.1); border-top: 3px solid #000; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+[data-theme="light"] .loader { border-top-color: #fff; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 768px) {
+    .app-container { padding: 40px 24px; border-radius: 24px; }
+    .brand-title { font-size: 36px; }
+    .coffee-grid { grid-template-columns: 1fr 1fr; }
+    .chip { flex-grow: 1; justify-content: center; }
+}
+/* Контейнер для результатов */
+.results-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 25px;
+    margin-top: 50px;
+    padding-bottom: 50px;
+}
+
+/* Элегантная карточка результата */
+.result-card-premium {
+    display: flex;
+    gap: 30px;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 25px;
+    backdrop-filter: blur(15px);
+    transition: transform 0.4s var(--ease-smooth);
+    animation: fadeIn 0.6s ease forwards;
+}
+
+.result-card-premium:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+}
+
+/* Обложка / Постер */
+.result-img-wrapper {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.result-img-wrapper img {
+    width: 140px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+}
+
+/* Бейдж рейтинга (для фильмов) */
+.rating-badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: var(--accent);
+    color: #0F0A07;
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 14px;
+    box-shadow: 0 5px 15px rgba(212, 165, 116, 0.4);
+}
+
+/* Информация о контенте */
+.result-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.result-info h3 {
+    font-family: var(--font-heading);
+    font-size: 28px;
+    margin: 0 0 8px 0;
+    color: var(--accent);
+}
+
+.result-meta {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 15px;
+    opacity: 0.9;
+}
+
+.result-description {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* Длительность (для музыки) */
+.duration {
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Анимация появления */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Адаптив для мобилок */
+@media (max-width: 600px) {
+    .result-card-premium {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .result-img-wrapper img {
+        width: 180px;
+        height: 260px;
+    }
+}
+.results-container {
+    margin-top: 40px; /* Чтобы результаты не слипались с кнопкой */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+/* Состояние загрузки для кнопки */
+.cta-btn.loading .loader {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-left: 10px;
+}
+
+.cta-btn.loading #btn-text {
+    opacity: 0.7;
+}
+
+/* Полноэкранный лоадер */
+#loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 10, 7, 0.8); /* Темный полупрозрачный фон */
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 0.3s ease;
+}
+
+#loading.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--glass-border);
+    border-top: 5px solid var(--accent); /* Твой золотой/акцентный цвет */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+/* --- 9. Results Grid System --- */
+#results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    align-items: stretch; /* Все карточки одной высоты в ряду */
+    margin-top: 50px;
+    padding-bottom: 50px;
+}
+
+/* Элегантная карточка результата */
+.result-card-premium {
+    display: flex;
+    flex-direction: column; /* Элементы друг под другом (постер сверху, инфо снизу) */
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 25px;
+    backdrop-filter: blur(15px);
+    transition: transform 0.4s var(--ease-smooth), border-color 0.4s ease;
+    animation: fadeIn 0.6s ease forwards;
+    height: 100%;
+}
+
+.result-card-premium:hover {
+    transform: translateY(-8px);
+    border-color: var(--accent);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+/* Обложка / Постер */
+.result-img-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.result-img-wrapper img {
+    width: 100%;
+    max-width: 180px; /* Фиксируем ширину обложки */
+    height: 260px;
+    object-fit: cover;
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    transition: transform 0.4s ease;
+}
+
+.result-card-premium:hover .result-img-wrapper img {
+    transform: scale(1.03);
+}
+
+/* Бейдж рейтинга */
+.rating-badge {
+    position: absolute;
+    top: -10px;
+    right: 10%;
+    background: var(--accent);
+    color: #0F0A07;
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 14px;
+    box-shadow: 0 5px 15px rgba(212, 165, 116, 0.4);
+    z-index: 2;
+}
+
+/* Информация о контенте */
+.result-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Чтобы описание растягивалось и кнопка была внизу (если будет) */
+}
+
+.result-info h3 {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    margin: 0 0 8px 0;
+    color: var(--accent);
+    line-height: 1.2;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.result-meta {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 12px;
+    opacity: 0.8;
+}
+
+.result-description {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin: 0;
+    /* Ограничение до 4 строк с троеточием */
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Длительность / Время */
+.duration {
+    margin-top: auto; /* Прижимает к низу карточки */
+    padding-top: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* --- 10. Анимации и Лоадеры --- */
+#loading {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 10, 7, 0.85);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+#loading.hidden { display: none; }
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid var(--glass-border);
+    border-top: 4px solid var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+.cta-btn.loading .loader {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s linear infinite;
+    margin-left: 12px;
+    vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Мобильная адаптация результатов */
+@media (max-width: 600px) {
+    #results {
+        grid-template-columns: 1fr;
+        padding: 10px;
+    }
+    .result-card-premium {
+        padding: 20px;
+    }
+}
+/* ====================================
+   ДОПОЛНЕНИЯ К СУЩЕСТВУЮЩЕМУ style.css
+   ==================================== */
+
+/* --- Loading Overlay (Полноэкранный) --- */
+#loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 10, 7, 0.95);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    opacity: 1;
+    transition: opacity 0.4s ease;
+}
+
+#loading.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid var(--glass-border);
+    border-top: 4px solid var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+.loading-text {
+    color: var(--text-main);
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* --- Empty State --- */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 40px;
+    text-align: center;
+    color: var(--text-muted);
+    animation: fadeIn 0.6s ease;
+}
+
+.empty-state i {
+    color: var(--accent);
+    opacity: 0.5;
+    margin-bottom: 24px;
+}
+
+.empty-state h3 {
+    font-family: var(--font-heading);
+    font-size: 28px;
+    color: var(--text-main);
+    margin: 0 0 12px 0;
+}
+
+.empty-state p {
+    font-size: 16px;
+    color: var(--text-muted);
+    max-width: 400px;
+    line-height: 1.6;
+}
+
+/* --- Error State --- */
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 40px;
+    text-align: center;
+    animation: fadeIn 0.6s ease;
+}
+
+.error-state i {
+    color: #E55050;
+    margin-bottom: 24px;
+}
+
+.error-state h3 {
+    font-family: var(--font-heading);
+    font-size: 28px;
+    color: var(--text-main);
+    margin: 0 0 12px 0;
+}
+
+.error-state p {
+    font-size: 16px;
+    color: var(--text-muted);
+    max-width: 400px;
+    line-height: 1.6;
+}
+
+/* --- Loading State для кнопки --- */
+.cta-btn.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.cta-btn.loading::after {
+    content: '';
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(15, 10, 7, 0.2);
+    border-top-color: #0F0A07;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+[data-theme="light"] .cta-btn.loading::after {
+    border-color: rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+}
+
+/* --- Улучшенная анимация появления результатов --- */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.result-card-premium {
+    animation: fadeIn 0.6s ease forwards;
+    opacity: 0;
+}
+
+/* Каскадная анимация (через JavaScript задается animation-delay) */
+.result-card-premium:nth-child(1) { animation-delay: 0s; }
+.result-card-premium:nth-child(2) { animation-delay: 0.1s; }
+.result-card-premium:nth-child(3) { animation-delay: 0.2s; }
+.result-card-premium:nth-child(4) { animation-delay: 0.3s; }
+.result-card-premium:nth-child(5) { animation-delay: 0.4s; }
+
+/* --- Адаптив для Loading --- */
+@media (max-width: 600px) {
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border-width: 3px;
+    }
+
+    .loading-text {
+        font-size: 14px;
+    }
+
+    .empty-state,
+    .error-state {
+        padding: 60px 20px;
+    }
+
+    .empty-state h3,
+    .error-state h3 {
+        font-size: 24px;
+    }
+
+    .empty-state p,
+    .error-state p {
+        font-size: 14px;
+    }
+}
+
+/* --- Accessibility улучшения --- */
+.chip:focus-visible,
+.coffee-card:focus-visible,
+.nav-item:focus-visible,
+.lang-btn:focus-visible,
+.cta-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Анимация спиннера */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- Дополнительная полировка карточек результатов --- */
+.result-card-premium:hover .result-img-wrapper img {
+    transform: scale(1.05);
+}
+
+.result-img-wrapper img {
+    transition: transform 0.4s var(--ease-smooth);
+}
+
+/* --- Улучшение читаемости в светлой теме --- */
+[data-theme="light"] .empty-state,
+[data-theme="light"] .error-state {
+    color: #3E2F1F;
+}
+
+[data-theme="light"] .loading-text {
+    color: #3E2F1F;
+}
+
+[data-theme="light"] #loading {
+    background: rgba(245, 237, 226, 0.95);
+}

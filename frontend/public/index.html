@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coffee & AI | Luxury Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        /* Стили для модального окна входа */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 10, 7, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        
+        .login-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .login-container {
+            max-width: 480px;
+            width: 90%;
+            background: rgba(45, 31, 24, 0.85);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(212, 165, 116, 0.25);
+            border-radius: 32px;
+            padding: 60px 40px;
+            box-shadow: 0 32px 64px rgba(0,0,0,0.6);
+            position: relative;
+            overflow: hidden;
+            transform: scale(1);
+            transition: transform 0.5s ease;
+        }
+        
+        .login-overlay.hidden .login-container {
+            transform: scale(0.9);
+        }
+        
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 100%;
+            background: radial-gradient(circle at top center, rgba(212, 165, 116, 0.15) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        
+        .logo-section {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #D4A574, #E8B923);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            box-shadow: 0 10px 30px rgba(212, 165, 116, 0.3);
+        }
+        
+        .login-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 36px;
+            background: linear-gradient(90deg, #D4A574, #F5E6D3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .login-subtitle {
+            font-size: 15px;
+            color: #B89F8A;
+            font-weight: 300;
+        }
+        
+        .form-section {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .input-group {
+            margin-bottom: 30px;
+        }
+        
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: #D4A574;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        
+        .code-input {
+            width: 100%;
+            padding: 18px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            border-radius: 16px;
+            color: #F5E6D3;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 4px;
+            text-align: center;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+        
+        .code-input:focus {
+            outline: none;
+            border-color: #D4A574;
+            background: rgba(212, 165, 116, 0.1);
+            box-shadow: 0 0 20px rgba(212, 165, 116, 0.2);
+        }
+        
+        .code-input::placeholder {
+            color: #B89F8A;
+            opacity: 0.5;
+            letter-spacing: 2px;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #D4A574, #E8B923);
+            border: none;
+            border-radius: 50px;
+            color: #0F0A07;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(212, 165, 116, 0.4);
+        }
+        
+        .login-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .login-btn.success {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+        
+        .error-message {
+            background: rgba(229, 80, 80, 0.15);
+            border: 1px solid rgba(229, 80, 80, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 20px;
+            color: #ff7b7b;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .help-text {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 13px;
+            color: #B89F8A;
+            line-height: 1.6;
+        }
+        
+        .help-text a {
+            color: #D4A574;
+            text-decoration: none;
+        }
+        
+        @media (max-width: 600px) {
+            .login-container { padding: 40px 30px; }
+            .login-title { font-size: 28px; }
+            .code-input { font-size: 18px; letter-spacing: 3px; }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <!-- МОДАЛЬНОЕ ОКНО ВХОДА -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-container">
+            <div class="logo-section">
+                <div class="logo-icon">☕</div>
+                <h1 class="login-title">Coffee & AI</h1>
+                <p class="login-subtitle">Введите код доступа</p>
+            </div>
+
+            <form class="form-section" id="loginForm">
+                <div class="input-group">
+                    <label for="accessCode">Код доступа</label>
+                    <input 
+                        type="text" 
+                        id="accessCode" 
+                        class="code-input" 
+                        placeholder="XXXX-XXXX"
+                        maxlength="9"
+                        autocomplete="off"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="login-btn" id="loginBtn">
+                    Войти
+                </button>
+
+                <div class="error-message" id="errorMessage"></div>
+            </form>
+
+            <div class="help-text">
+                Код доступа можно получить в кофейне<br>
+                или связаться с <a href="https://t.me/itekwai">поддержкой</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
+    <div class="background-effects"></div>
+
+    <div class="app-container" id="appContainer" style="display: none;">
+        <header class="top-bar">
+            <div class="lang-switcher">
+                <button class="lang-btn active" onclick="setLang('ru')">RU</button>
+                <button class="lang-btn" onclick="setLang('en')">EN</button>
+                <button class="lang-btn" onclick="setLang('kz')">KZ</button>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <div class="toggle-track">
+                        <i data-lucide="sun" class="icon-sun"></i>
+                        <i data-lucide="moon" class="icon-moon"></i>
+                    </div>
+                </button>
+                <button onclick="logout()" style="background: none; border: 1px solid rgba(212,165,116,0.3); color: #D4A574; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px;">
+                    Выйти
+                </button>
+            </div>
+        </header>
+        
+        <div class="hero-section">
+            <h1 class="brand-title">Coffee & AI</h1>
+            <p id="subtitle" class="brand-subtitle">Искусство подбора контента под твой кофе</p>
+        </div>
+
+        <nav class="main-nav">
+            <button class="nav-item active" onclick="switchCategory('books', this)">
+                <i data-lucide="book-open"></i> <span data-key="books">Книги</span>
+            </button>
+            <button class="nav-item" onclick="switchCategory('movies', this)">
+                <i data-lucide="film"></i> <span data-key="movies">Фильмы</span>
+            </button>
+            <button class="nav-item" onclick="switchCategory('music', this)">
+                <i data-lucide="music"></i> <span data-key="music">Музыка</span>
+            </button>
+            <button class="nav-item" onclick="window.location.href='/minechess'">
+                <i data-lucide="swords"></i> <span>MineChess</span>
+            </button>
+        </nav>
+
+        <div class="divider"></div>
+
+        <div class="section-block">
+            <div class="section-header">
+                <span id="coffee-label" class="header-title">ВАШ НАПИТОК</span>
+            </div>
+            <div class="coffee-grid">
+                <div class="coffee-card active" onclick="selectCoffee(this)">
+                    <div class="steam-container"><span></span><span></span></div>
+                    <i data-lucide="cup-soda"></i>
+                    <span>Espresso</span>
+                </div>
+                <div class="coffee-card" onclick="selectCoffee(this)">
+                    <div class="steam-container"><span></span><span></span></div>
+                    <i data-lucide="glass-water"></i>
+                    <span>Latte</span>
+                </div>
+                <div class="coffee-card" onclick="selectCoffee(this)">
+                    <div class="steam-container"><span></span><span></span></div>
+                    <i data-lucide="cloud"></i>
+                    <span>Cappuccino</span>
+                </div>
+                <div class="coffee-card" onclick="selectCoffee(this)">
+                    <div class="steam-container"><span></span><span></span></div>
+                    <i data-lucide="snowflake"></i>
+                    <span>Americano</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="dynamic-filters" class="filters-container"></div>
+
+        <div class="action-area">
+            <button id="main-btn" class="cta-btn">
+                <span id="btn-text">Подобрать коллекцию</span>
+                <div class="loader"></div>
+            </button>
+            <p id="attempts-text" class="footer-note"></p>
+        </div>
+
+        <div id="results" class="results-container"></div>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+        // ============================================================
+        // ЛОГИКА АВТОРИЗАЦИИ (встроена в index.html)
+        // ============================================================
+        
+        const loginOverlay = document.getElementById('loginOverlay');
+        const appContainer = document.getElementById('appContainer');
+        const loginForm = document.getElementById('loginForm');
+        const codeInput = document.getElementById('accessCode');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // Автоформатирование кода
+        codeInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+            if (value.length > 4) {
+                value = value.slice(0, 4) + '-' + value.slice(4, 8);
+            }
+            e.target.value = value;
+        });
+        
+        // Отправка формы
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const code = codeInput.value.trim();
+            
+            if (code.length < 9) {
+                showLoginError('Введите полный код доступа');
+                return;
+            }
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Проверка...';
+            errorMessage.classList.remove('show');
+            
+            try {
+                const response = await fetch('/access/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Сохраняем токен
+                    localStorage.setItem('sessionToken', data.sessionToken);
+                    localStorage.setItem('sessionExpiresAt', data.expiresAt);
+                    
+                    // Успех!
+                    loginBtn.textContent = '✓ Успешно!';
+                    loginBtn.classList.add('success');
+                    
+                    // Скрываем форму входа, показываем приложение
+                    setTimeout(() => {
+                        loginOverlay.classList.add('hidden');
+                        appContainer.style.display = 'block';
+                        
+                        // Инициализируем приложение
+                        if (typeof init === 'function') {
+                            init();
+                        }
+                    }, 500);
+                    
+                } else {
+                    showLoginError(data.error || 'Неверный код доступа');
+                    resetLoginBtn();
+                }
+                
+            } catch (err) {
+                console.error('Login error:', err);
+                showLoginError('Ошибка соединения с сервером');
+                resetLoginBtn();
+            }
+        });
+        
+        function showLoginError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+        }
+        
+        function resetLoginBtn() {
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Войти';
+            loginBtn.classList.remove('success');
+        }
+        
+        // Проверка существующей сессии при загрузке
+        async function checkExistingSession() {
+            const sessionToken = localStorage.getItem('sessionToken');
+            
+            if (!sessionToken) {
+                // Нет токена - показываем форму входа
+                loginOverlay.classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/access/status', {
+                    headers: { 'X-Session-Token': sessionToken }
+                });
+                
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    // Авторизован - показываем приложение
+                    loginOverlay.classList.add('hidden');
+                    appContainer.style.display = 'block';
+                    
+                    if (typeof init === 'function') {
+                        init();
+                    }
+                } else {
+                    // Сессия истекла
+                    localStorage.removeItem('sessionToken');
+                    localStorage.removeItem('sessionExpiresAt');
+                    loginOverlay.classList.remove('hidden');
+                }
+                
+            } catch (err) {
+                console.error('Session check error:', err);
+                // При ошибке сети - показываем форму
+                loginOverlay.classList.remove('hidden');
+            }
+        }
+        
+        // Функция выхода
+        window.logout = async function() {
+            const sessionToken = localStorage.getItem('sessionToken');
+            
+            if (sessionToken) {
+                try {
+                    await fetch('/access/logout', {
+                        method: 'POST',
+                        headers: { 'X-Session-Token': sessionToken }
+                    });
+                } catch (err) {
+                    console.error('Logout error:', err);
+                }
+            }
+            
+            localStorage.removeItem('sessionToken');
+            localStorage.removeItem('sessionExpiresAt');
+            
+            // Показываем форму входа
+            appContainer.style.display = 'none';
+            loginOverlay.classList.remove('hidden');
+            codeInput.value = '';
+            resetLoginBtn();
+            errorMessage.classList.remove('show');
+        };
+        
+        // Запускаем проверку при загрузке
+        checkExistingSession();
+    </script>
+</body>
+</html>

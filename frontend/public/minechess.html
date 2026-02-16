@@ -1,0 +1,1693 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MineChess | Coffee & AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-body: #0F0A07;
+            --card-bg: linear-gradient(180deg, rgba(45, 31, 24, 0.85) 0%, rgba(15, 10, 7, 0.95) 100%);
+            --glass-border: rgba(212, 165, 116, 0.25);
+            --accent: #D4A574;
+            --accent-glow: #E8B923;
+            --text-main: #F5E6D3;
+            --text-muted: #B89F8A;
+            --card-shadow: 0 32px 64px rgba(0,0,0,0.6);
+            --font-heading: 'Playfair Display', serif;
+            --font-body: 'Inter', sans-serif;
+            --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+            --board-light: #8B6F47;
+            --board-dark: #5C4A33;
+            --piece-white: #FFFFFF;
+            --piece-black: #1A1A1A;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #F5EDE2;
+            --card-bg: linear-gradient(180deg, rgba(255, 248, 240, 0.9) 0%, rgba(255, 248, 240, 0.8) 100%);
+            --glass-border: rgba(212, 165, 116, 0.4);
+            --accent: #B89F8A;
+            --accent-glow: #D4A574;
+            --text-main: #3E2F1F;
+            --text-muted: #8A7A6D;
+            --card-shadow: 0 32px 64px rgba(62, 47, 31, 0.15);
+            --board-light: #A68A5C;
+            --board-dark: #7A5F3F;
+            --piece-white: #FFFFFF;
+            --piece-black: #1A1A1A;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: background 0.5s var(--ease-smooth);
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 1400px;
+            background: var(--card-bg);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.15);
+            border-radius: 32px;
+            padding: 40px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 100%;
+            background: radial-gradient(circle at top center, rgba(212, 165, 116, 0.15) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateX(-3px);
+        }
+
+        .theme-toggle {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.4s var(--ease-smooth);
+        }
+
+        .theme-toggle:hover { color: var(--accent); }
+        .toggle-track { display: flex; align-items: center; gap: 10px; }
+        .theme-toggle i { transition: transform 0.5s var(--ease-smooth), opacity 0.5s var(--ease-smooth); }
+        [data-theme="dark"] .icon-sun { opacity: 0.3; transform: scale(0.8); }
+        [data-theme="dark"] .icon-moon { color: var(--accent); transform: scale(1.1); }
+        [data-theme="light"] .icon-sun { color: var(--accent); transform: scale(1.1); }
+        [data-theme="light"] .icon-moon { opacity: 0.3; transform: scale(0.8); }
+
+        .game-header {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .game-title {
+            font-family: var(--font-heading);
+            font-size: 48px;
+            background: linear-gradient(90deg, var(--accent), var(--text-main));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .game-subtitle {
+            color: var(--text-muted);
+            font-size: 16px;
+            font-weight: 300;
+        }
+
+        .game-layout {
+            position: relative;
+            z-index: 2;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 40px;
+            align-items: start;
+        }
+
+        .board-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .turn-indicator {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 70px);
+            grid-template-rows: repeat(8, 70px);
+            gap: 0;
+            border: 3px solid rgba(60, 50, 40, 0.8);
+            border-radius: 8px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            background: #3A2F24;
+        }
+
+        .cell {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(40, 30, 20, 0.3);
+        }
+
+        .cell.white { background: var(--board-light); }
+        .cell.black { background: var(--board-dark); }
+
+        .cell.piece-white {
+            color: var(--piece-white);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.5);
+        }
+
+        .cell.piece-black {
+            color: var(--piece-black);
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.5), 0 0 1px rgba(255,255,255,0.3);
+        }
+
+        .cell.closed::after {
+            content: '?';
+            position: absolute;
+            font-size: 24px;
+            color: rgba(255,255,255,0.3);
+            opacity: 0.5;
+        }
+
+        .cell.mine-number::after {
+            position: absolute;
+            bottom: 4px;
+            right: 6px;
+            font-size: 18px;
+            font-weight: 900;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .cell.mine-number.n1::after { content: '1'; color: #4A9EFF; }
+        .cell.mine-number.n2::after { content: '2'; color: #4CAF50; }
+        .cell.mine-number.n3::after { content: '3'; color: #FFB74D; }
+        .cell.mine-number.n4::after { content: '4'; color: #FF7043; }
+        .cell.mine-number.n5::after { content: '5'; color: #E91E63; }
+        .cell.mine-number.n6::after { content: '6'; color: #9C27B0; }
+        .cell.mine-number.n7::after { content: '7'; color: #673AB7; }
+        .cell.mine-number.n8::after { content: '8'; color: #F44336; }
+
+        .cell.flagged::before {
+            content: '🚩';
+            position: absolute;
+            font-size: 28px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
+        .cell.show-mine::before {
+            content: '💣';
+            position: absolute;
+            font-size: 20px;
+            top: 2px;
+            left: 2px;
+            opacity: 0.8;
+            z-index: 10;
+        }
+
+        .cell.highlighted {
+            background: rgba(76, 175, 80, 0.5) !important;
+            box-shadow: inset 0 0 15px rgba(76, 175, 80, 0.8);
+        }
+
+        .cell.scout-highlight {
+            background: rgba(33, 150, 243, 0.5) !important;
+            box-shadow: inset 0 0 15px rgba(33, 150, 243, 0.8);
+        }
+
+        .cell.forbidden {
+            background: rgba(229, 80, 80, 0.5) !important;
+            cursor: not-allowed;
+            box-shadow: inset 0 0 15px rgba(229, 80, 80, 0.8);
+        }
+
+        .cell.selected {
+            border: 3px solid var(--accent) !important;
+            box-shadow: 0 0 20px rgba(212, 165, 116, 1);
+        }
+
+        .cell.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .cell.damaged::before {
+            content: '⏳';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 16px;
+        }
+
+        .cell.weakened::before {
+            content: '⚡';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 16px;
+            color: #FFB74D;
+        }
+
+        .cell:hover:not(.forbidden):not(.disabled) {
+            transform: scale(1.08);
+            filter: brightness(1.2);
+        }
+
+        .exploded {
+            animation: explosion 0.6s ease-out !important;
+        }
+
+        @keyframes explosion {
+            0% { transform: scale(1); }
+            30% { 
+                transform: scale(1.5); 
+                background: rgba(255, 69, 0, 0.9) !important;
+                box-shadow: 0 0 40px rgba(255, 69, 0, 1);
+            }
+            100% { transform: scale(1); }
+        }
+
+        .side-panel {
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .panel-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 24px;
+        }
+
+        .panel-title {
+            font-size: 13px;
+            letter-spacing: 2px;
+            color: var(--accent);
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-glow));
+            border: none;
+            border-radius: 50px;
+            color: #0F0A07;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            margin-bottom: 12px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(212, 165, 116, 0.4);
+        }
+
+        .action-btn.secondary {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+        }
+
+        .action-btn.debug {
+            background: rgba(255, 152, 0, 0.2);
+            color: var(--accent);
+            border: 1px solid rgba(255, 152, 0, 0.3);
+            font-size: 13px;
+            padding: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-row:last-child { border-bottom: none; }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .stat-value {
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn.active {
+            background: rgba(212, 165, 116, 0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 10, 7, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            max-width: 500px;
+            width: 90%;
+            background: rgba(45, 31, 24, 0.95);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .modal-title {
+            font-family: var(--font-heading);
+            font-size: 36px;
+            background: linear-gradient(90deg, var(--accent), var(--text-main));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+
+        .modal-text {
+            color: var(--text-muted);
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1200px) {
+            .game-layout { grid-template-columns: 1fr; }
+            .side-panel {
+                width: 100%;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                display: grid;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .chess-board {
+                grid-template-columns: repeat(8, 50px);
+                grid-template-rows: repeat(8, 50px);
+            }
+            .cell { font-size: 32px; }
+            .game-title { font-size: 36px; }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <div class="game-container">
+        <div class="top-bar">
+            <button class="back-btn" onclick="window.location.href='/'">
+                <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                <span id="backBtn">Назад</span>
+            </button>
+            <button onclick="toggleTheme()" class="theme-toggle">
+                <div class="toggle-track">
+                    <i data-lucide="sun" class="icon-sun" style="width: 20px; height: 20px;"></i>
+                    <i data-lucide="moon" class="icon-moon" style="width: 20px; height: 20px;"></i>
+                </div>
+            </button>
+        </div>
+
+        <div class="game-header">
+            <h1 class="game-title">♟️💣 MINECHESS</h1>
+            <p class="game-subtitle" id="gameSubtitle">Шахматы × Сапёр | Стратегия под вуалью тумана войны</p>
+        </div>
+
+        <div class="game-layout">
+            <div class="board-section">
+                <div class="turn-indicator" id="turnIndicator">ХОД БЕЛЫХ</div>
+                <div class="chess-board" id="chessBoard"></div>
+                <div class="mode-selector">
+                    <button class="mode-btn active" onclick="setMode('move')" id="modeMove">Ход фигурой</button>
+                    <button class="mode-btn" onclick="setMode('scout')" id="modeScout">Разведка</button>
+                    <button class="mode-btn" onclick="setMode('flag')" id="modeFlag">🚩 Флажок</button>
+                </div>
+            </div>
+
+            <div class="side-panel">
+                <div class="panel-card">
+                    <div class="panel-title" id="panelControl">🔄 Управление</div>
+                    <button class="action-btn" onclick="restartGame()" id="btnRestart">Новая игра</button>
+                    <button class="action-btn secondary" onclick="toggleGuide()" id="btnRules">Правила</button>
+                    <button class="action-btn debug" onclick="toggleMines()" id="btnDebug">🔍 Показать мины (DEBUG)</button>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-title" id="panelStats">📊 Статистика</div>
+                    <div class="stat-row">
+                        <span class="stat-label" id="statTotal">Всего мин</span>
+                        <span class="stat-value" id="totalMines">12</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label" id="statFound">Найдено мин</span>
+                        <span class="stat-value" id="foundMines">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label" id="statExploded">Взорвано</span>
+                        <span class="stat-value" id="explodedMines">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label" id="statClosed">Закрытых клеток</span>
+                        <span class="stat-value" id="closedCells">32</span>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-title" id="panelGuide">📘 Быстрая справка</div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <tr>
+                            <td style="padding: 8px; text-align: center; font-size: 20px; width: 40px; border-bottom: 1px solid var(--glass-border);">♙</td>
+                            <td style="padding: 8px; color: var(--text-muted); border-bottom: 1px solid var(--glass-border);" id="refPawn">Уничтожается</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; text-align: center; font-size: 20px; border-bottom: 1px solid var(--glass-border);">♘</td>
+                            <td style="padding: 8px; color: var(--text-muted); border-bottom: 1px solid var(--glass-border);" id="refKnight">Возвращается назад</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; text-align: center; font-size: 20px; border-bottom: 1px solid var(--glass-border);">♗</td>
+                            <td style="padding: 8px; color: var(--text-muted); border-bottom: 1px solid var(--glass-border);" id="refBishop">Уничтожается</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; text-align: center; font-size: 20px; border-bottom: 1px solid var(--glass-border);">♖</td>
+                            <td style="padding: 8px; color: var(--text-muted); border-bottom: 1px solid var(--glass-border);" id="refRook">Пропускает 1 ход</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; text-align: center; font-size: 20px; border-bottom: 1px solid var(--glass-border);">♕</td>
+                            <td style="padding: 8px; color: var(--text-muted); border-bottom: 1px solid var(--glass-border);" id="refQueen">Ослабляется на 2 хода</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; text-align: center; font-size: 20px;">♔</td>
+                            <td style="padding: 8px; color: var(--text-muted);" id="refKing">Не может ходить</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="gameOverModal">
+        <div class="modal-content">
+            <h2 class="modal-title" id="modalTitle">Победа!</h2>
+            <p class="modal-text" id="modalText">Белые одержали победу</p>
+            <button class="action-btn" onclick="restartGame()" id="modalBtnRestart">Новая игра</button>
+        </div>
+    </div>
+
+    <div class="modal" id="guideModal">
+        <div class="modal-content" style="max-width: 600px; text-align: left;">
+            <h2 class="modal-title" id="guideTitle">Правила MineChess</h2>
+            <div style="margin-bottom: 16px;">
+                <h4 style="color: var(--text-main); font-size: 14px; margin-bottom: 6px;" id="guideGoalTitle">🎯 Цель игры</h4>
+                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;" id="guideGoalText">Уничтожить короля противника, избегая мин на поле</p>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <h4 style="color: var(--text-main); font-size: 14px; margin-bottom: 6px;" id="guideMinesTitle">💣 Мины</h4>
+                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;" id="guideMinesText">Размещаются после первого хода. Нельзя ставить на стартовых рядах и клетке первого хода</p>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <h4 style="color: var(--text-main); font-size: 14px; margin-bottom: 6px;" id="guideScoutTitle">🔍 Разведка</h4>
+                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;" id="guideScoutText">Вместо хода можно разведать клетку. Каждая фигура имеет свой радиус разведки</p>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <h4 style="color: var(--text-main); font-size: 14px; margin-bottom: 6px;" id="guideBehaviorTitle">⚔️ Поведение при подрыве</h4>
+                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;" id="guideBehaviorText">Король не может наступить на мину. Конь возвращается. Пешка и слон гибнут. Ладья пропускает ход. Ферзь ослабляется</p>
+            </div>
+            <button class="action-btn" onclick="toggleGuide()" style="margin-top: 20px;" id="guideCloseBtn">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        // ============ LOCALIZATION ============
+        const translations = {
+            ru: {
+                backBtn: 'Назад', gameSubtitle: 'Шахматы × Сапёр | Стратегия под вуалью тумана войны',
+                turnWhite: 'ХОД БЕЛЫХ', turnBlack: 'ХОД ЧЁРНЫХ',
+                modeMove: 'Ход фигурой', modeScout: 'Разведка', modeFlag: '🚩 Флажок',
+                panelControl: '🔄 Управление', btnRestart: 'Новая игра', btnRules: 'Правила',
+                btnDebug: '🔍 Показать мины (DEBUG)', panelStats: '📊 Статистика',
+                statTotal: 'Всего мин', statFound: 'Найдено мин', statExploded: 'Взорвано', statClosed: 'Закрытых клеток',
+                panelGuide: '📘 Быстрая справка', refPawn: 'Уничтожается', refKnight: 'Возвращается назад',
+                refBishop: 'Уничтожается', refRook: 'Пропускает 1 ход', refQueen: 'Ослабляется на 2 хода', refKing: 'Не может ходить',
+                victoryWhite: '♔ Победа белых!', victoryBlack: '♚ Победа чёрных!',
+                victoryTextWhite: 'Белые одержали победу! Чёрный король уничтожен.',
+                victoryTextBlack: 'Чёрные одержали победу! Белый король уничтожен.',
+                modalBtnRestart: 'Новая игра', guideTitle: 'Правила MineChess',
+                guideGoalTitle: '🎯 Цель игры', guideGoalText: 'Уничтожить короля противника, избегая мин на поле',
+                guideMinesTitle: '💣 Мины', guideMinesText: 'Размещаются после первого хода. Нельзя ставить на стартовых рядах и клетке первого хода',
+                guideScoutTitle: '🔍 Разведка', guideScoutText: 'Вместо хода можно разведать клетку. Каждая фигура имеет свой радиус разведки',
+                guideBehaviorTitle: '⚔️ Поведение при подрыве', guideBehaviorText: 'Король не может наступить на мину. Конь возвращается. Пешка и слон гибнут. Ладья пропускает ход. Ферзь ослабляется',
+                guideCloseBtn: 'Закрыть', damagedPiece: 'Эта фигура повреждена и пропускает ход!'
+            },
+            en: {
+                backBtn: 'Back', gameSubtitle: 'Chess × Minesweeper | Strategy under fog of war',
+                turnWhite: 'WHITE TURN', turnBlack: 'BLACK TURN',
+                modeMove: 'Move Piece', modeScout: 'Scout', modeFlag: '🚩 Flag',
+                panelControl: '🔄 Controls', btnRestart: 'New Game', btnRules: 'Rules',
+                btnDebug: '🔍 Show Mines (DEBUG)', panelStats: '📊 Statistics',
+                statTotal: 'Total Mines', statFound: 'Mines Found', statExploded: 'Exploded', statClosed: 'Closed Cells',
+                panelGuide: '📘 Quick Reference', refPawn: 'Destroyed', refKnight: 'Returns back',
+                refBishop: 'Destroyed', refRook: 'Skips 1 turn', refQueen: 'Weakened 2 turns', refKing: 'Cannot move',
+                victoryWhite: '♔ White Wins!', victoryBlack: '♚ Black Wins!',
+                victoryTextWhite: 'White won! Black king destroyed.',
+                victoryTextBlack: 'Black won! White king destroyed.',
+                modalBtnRestart: 'New Game', guideTitle: 'MineChess Rules',
+                guideGoalTitle: '🎯 Game Goal', guideGoalText: 'Destroy opponent king while avoiding mines',
+                guideMinesTitle: '💣 Mines', guideMinesText: 'Placed after first move. Cannot be on starting rows or first move cell',
+                guideScoutTitle: '🔍 Scouting', guideScoutText: 'Instead of moving, scout a cell. Each piece has scout range',
+                guideBehaviorTitle: '⚔️ Mine Behavior', guideBehaviorText: 'King cannot step on mines. Knight returns. Pawn and Bishop die. Rook skips turn. Queen weakens',
+                guideCloseBtn: 'Close', damagedPiece: 'This piece is damaged and skips turn!'
+            },
+            kz: {
+                backBtn: 'Артқа', gameSubtitle: 'Шахмат × Минер | Соғыс туманындағы стратегия',
+                turnWhite: 'АҚ ЖҮРІС', turnBlack: 'ҚАРА ЖҮРІС',
+                modeMove: 'Фигураны жылжыту', modeScout: 'Барлау', modeFlag: '🚩 Жалауша',
+                panelControl: '🔄 Басқару', btnRestart: 'Жаңа ойын', btnRules: 'Ережелер',
+                btnDebug: '🔍 Миналарды көрсету (DEBUG)', panelStats: '📊 Статистика',
+                statTotal: 'Барлық миналар', statFound: 'Табылған', statExploded: 'Жарылған', statClosed: 'Жабық ұяшықтар',
+                panelGuide: '📘 Анықтама', refPawn: 'Жойылады', refKnight: 'Артқа қайтады',
+                refBishop: 'Жойылады', refRook: '1 жүрісті өткізеді', refQueen: '2 жүріске әлсірейді', refKing: 'Жүре алмайды',
+                victoryWhite: '♔ Ақ жеңді!', victoryBlack: '♚ Қара жеңді!',
+                victoryTextWhite: 'Ақ жеңді! Қара патша жойылды.',
+                victoryTextBlack: 'Қара жеңді! Ақ патша жойылды.',
+                modalBtnRestart: 'Жаңа ойын', guideTitle: 'MineChess ережелері',
+                guideGoalTitle: '🎯 Мақсат', guideGoalText: 'Қарсылас патшасын жою, миналардан аулақ болу',
+                guideMinesTitle: '💣 Миналар', guideMinesText: 'Бірінші жүрістен кейін орналасады. Бастапқы қаторларға қоюға болмайды',
+                guideScoutTitle: '🔍 Барлау', guideScoutText: 'Жүріс орнына ұяшықты зерттеуге болады',
+                guideBehaviorTitle: '⚔️ Әрекет', guideBehaviorText: 'Патша минаға баса алмайды. Ат артқа қайтады. Пешка мен сүңгі өледі',
+                guideCloseBtn: 'Жабу', damagedPiece: 'Фигура зақымданған!'
+            }
+        };
+
+        let currentLang = localStorage.getItem('currentLang') || 'ru';
+
+        function updateTranslations() {
+            const t = translations[currentLang];
+            Object.keys(t).forEach(key => {
+                const el = document.getElementById(key);
+                if (el) el.textContent = t[key];
+            });
+            updateTurnIndicator();
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            lucide.createIcons();
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.body.setAttribute('data-theme', savedTheme);
+
+        // ============ STATE ============
+        let gameState = {
+            currentPlayer: 'white',
+            turn: 1,
+            mode: 'move',  // 'move', 'scout', 'flag'
+            
+            board: [],
+            pieces: {},
+            
+            minesGenerated: false,
+            showMines: false,
+            
+            selectedPiece: null,
+            
+            stats: {
+                totalMines: 12,
+                foundMines: 0,
+                explodedMines: 0
+            },
+            
+            gameOver: false
+        };
+
+        const PIECE_SYMBOLS = {
+            white: { king: '♔', queen: '♕', rook: '♖', bishop: '♗', knight: '♘', pawn: '♙' },
+            black: { king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '♞', pawn: '♟' }
+        };
+
+        // ============ INIT ============
+        function initGame() {
+            createEmptyBoard();
+            placePieces();
+            openStartRows();
+            
+            gameState.currentPlayer = 'white';
+            gameState.turn = 1;
+            gameState.mode = 'move';
+            gameState.minesGenerated = false;
+            gameState.showMines = false;
+            gameState.selectedPiece = null;
+            gameState.stats = { totalMines: 12, foundMines: 0, explodedMines: 0 };
+            gameState.gameOver = false;
+            
+            renderBoard();
+            updateStats();
+            updateTurnIndicator();
+        }
+
+        function createEmptyBoard() {
+            gameState.board = [];
+            for (let row = 0; row < 8; row++) {
+                gameState.board[row] = [];
+                for (let col = 0; col < 8; col++) {
+                    gameState.board[row][col] = {
+                        row: row,
+                        col: col,
+                        isOpen: false,
+                        hasMine: false,
+                        minesAround: 0,
+                        pieceId: null,
+                        isFlagged: false  // Флажок игрока
+                    };
+                }
+            }
+        }
+
+        function placePieces() {
+            gameState.pieces = {};
+            
+            // White pieces (row 0, 1)
+            const backRowPieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+            
+            for (let col = 0; col < 8; col++) {
+                // White back row
+                const whiteBackId = `w_${backRowPieces[col]}_${col < 4 ? 1 : 2}`;
+                gameState.pieces[whiteBackId] = {
+                    id: whiteBackId,
+                    type: backRowPieces[col],
+                    color: 'white',
+                    row: 0,
+                    col: col,
+                    alive: true,
+                    hasMoved: false,  // Для рокировки
+                    status: { skipTurns: 0, weakenedTurns: 0, weakenedMode: null }
+                };
+                gameState.board[0][col].pieceId = whiteBackId;
+                
+                // White pawns
+                const whitePawnId = `w_pawn_${col + 1}`;
+                gameState.pieces[whitePawnId] = {
+                    id: whitePawnId,
+                    type: 'pawn',
+                    color: 'white',
+                    row: 1,
+                    col: col,
+                    alive: true,
+                    hasMoved: false,
+                    status: { skipTurns: 0, weakenedTurns: 0, weakenedMode: null }
+                };
+                gameState.board[1][col].pieceId = whitePawnId;
+                
+                // Black pawns
+                const blackPawnId = `b_pawn_${col + 1}`;
+                gameState.pieces[blackPawnId] = {
+                    id: blackPawnId,
+                    type: 'pawn',
+                    color: 'black',
+                    row: 6,
+                    col: col,
+                    alive: true,
+                    hasMoved: false,
+                    status: { skipTurns: 0, weakenedTurns: 0, weakenedMode: null }
+                };
+                gameState.board[6][col].pieceId = blackPawnId;
+                
+                // Black back row
+                const blackBackId = `b_${backRowPieces[col]}_${col < 4 ? 1 : 2}`;
+                gameState.pieces[blackBackId] = {
+                    id: blackBackId,
+                    type: backRowPieces[col],
+                    color: 'black',
+                    row: 7,
+                    col: col,
+                    alive: true,
+                    hasMoved: false,  // Для рокировки
+                    status: { skipTurns: 0, weakenedTurns: 0, weakenedMode: null }
+                };
+                gameState.board[7][col].pieceId = blackBackId;
+            }
+        }
+
+        function openStartRows() {
+            for (let col = 0; col < 8; col++) {
+                gameState.board[0][col].isOpen = true;
+                gameState.board[1][col].isOpen = true;
+                gameState.board[6][col].isOpen = true;
+                gameState.board[7][col].isOpen = true;
+            }
+        }
+
+        // ============ MINES ============
+        function generateMines(firstMoveCell) {
+            const forbiddenCells = new Set();
+            
+            // Стартовые ряды
+            for (let col = 0; col < 8; col++) {
+                forbiddenCells.add(`0-${col}`);
+                forbiddenCells.add(`1-${col}`);
+                forbiddenCells.add(`6-${col}`);
+                forbiddenCells.add(`7-${col}`);
+            }
+            
+            // Клетка первого хода
+            forbiddenCells.add(`${firstMoveCell.row}-${firstMoveCell.col}`);
+            
+            let minesPlaced = 0;
+            while (minesPlaced < gameState.stats.totalMines) {
+                const row = Math.floor(Math.random() * 8);
+                const col = Math.floor(Math.random() * 8);
+                const key = `${row}-${col}`;
+                
+                if (!forbiddenCells.has(key) && !gameState.board[row][col].hasMine) {
+                    gameState.board[row][col].hasMine = true;
+                    minesPlaced++;
+                }
+            }
+            
+            calculateMineNumbers();
+            gameState.minesGenerated = true;
+        }
+
+        function calculateMineNumbers() {
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const cell = gameState.board[row][col];
+                    
+                    if (cell.hasMine) {
+                        cell.minesAround = null;
+                        continue;
+                    }
+                    
+                    let count = 0;
+                    
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            if (dr === 0 && dc === 0) continue;
+                            
+                            const r = row + dr;
+                            const c = col + dc;
+                            
+                            if (r < 0 || r >= 8 || c < 0 || c >= 8) continue;
+                            
+                            if (gameState.board[r][c].hasMine) {
+                                count++;
+                            }
+                        }
+                    }
+                    
+                    cell.minesAround = count;
+                }
+            }
+            
+            // DEBUG: показать карту мин
+            console.log('🗺️ Карта мин:');
+            console.table(
+                gameState.board.map(row =>
+                    row.map(c => c.hasMine ? "💣" : c.minesAround)
+                )
+            );
+        }
+
+        function applyMineEffect(piece, fromCell) {
+            gameState.stats.explodedMines++;
+            
+            const cell = gameState.board[piece.row][piece.col];
+            const cellElement = document.querySelector(`[data-row="${piece.row}"][data-col="${piece.col}"]`);
+            if (cellElement) {
+                cellElement.classList.add('exploded');
+            }
+            
+            setTimeout(() => {
+                switch (piece.type) {
+                    case 'pawn':
+                    case 'bishop':
+                        // Уничтожаются
+                        piece.alive = false;
+                        cell.pieceId = null;
+                        break;
+                    
+                    case 'knight':
+                        // Возвращается назад
+                        cell.pieceId = null;
+                        piece.row = fromCell.row;
+                        piece.col = fromCell.col;
+                        gameState.board[fromCell.row][fromCell.col].pieceId = piece.id;
+                        break;
+                    
+                    case 'rook':
+                        // Пропускает следующий ход
+                        piece.status.skipTurns = 1;
+                        break;
+                    
+                    case 'queen':
+                        // Ослабляется на 2 хода
+                        piece.status.weakenedTurns = 2;
+                        piece.status.weakenedMode = Math.random() > 0.5 ? 'straight' : 'diagonal';
+                        break;
+                }
+                
+                endTurn();
+            }, 700);
+        }
+
+        // ============ MOVES ============
+        function canSelectPiece(piece) {
+            if (!piece) return false;
+            if (!piece.alive) return false;
+            if (piece.color !== gameState.currentPlayer) return false;
+            if (piece.status.skipTurns > 0) return false;
+            return true;
+        }
+
+        function makeMove(piece, fromCell, toCell) {
+            // Первый ход - генерация мин
+            if (!gameState.minesGenerated) {
+                generateMines(toCell);
+            }
+            
+            // Перемещение
+            fromCell.pieceId = null;
+            toCell.pieceId = piece.id;
+            piece.row = toCell.row;
+            piece.col = toCell.col;
+            piece.hasMoved = true;  // Помечаем что фигура походила
+            
+            // Открытие клетки
+            openCell(toCell);
+            
+            // Проверка мины
+            if (toCell.hasMine && piece.type !== 'king') {
+                applyMineEffect(piece, fromCell);
+            } else {
+                endTurn();
+            }
+        }
+
+        function openCell(cell) {
+            if (!cell.isOpen) {
+                cell.isOpen = true;
+                if (cell.hasMine) {
+                    gameState.stats.foundMines++;
+                }
+            }
+        }
+
+        function endTurn() {
+            // Уменьшаем счётчики для фигур текущего игрока
+            for (const pieceId in gameState.pieces) {
+                const piece = gameState.pieces[pieceId];
+                if (piece.color === gameState.currentPlayer && piece.alive) {
+                    if (piece.status.skipTurns > 0) {
+                        piece.status.skipTurns--;
+                    }
+                    if (piece.status.weakenedTurns > 0) {
+                        piece.status.weakenedTurns--;
+                        if (piece.status.weakenedTurns === 0) {
+                            piece.status.weakenedMode = null;
+                        }
+                    }
+                }
+            }
+            
+            // Смена игрока
+            gameState.currentPlayer = gameState.currentPlayer === 'white' ? 'black' : 'white';
+            gameState.turn++;
+            gameState.selectedPiece = null;
+            
+            renderBoard();
+            updateStats();
+            updateTurnIndicator();
+            checkGameOver();
+        }
+
+        // ============ SCOUT ============
+        function scoutCell(piece, cell) {
+            openCell(cell);
+            endTurn();
+        }
+
+        function getScoutCells(piece) {
+            const cells = [];
+            const { row, col } = piece;
+            
+            switch (piece.type) {
+                case 'pawn':
+                    const dir = piece.color === 'white' ? 1 : -1;
+                    if (isInBounds(row + dir, col)) {
+                        cells.push(gameState.board[row + dir][col]);
+                    }
+                    break;
+                
+                case 'knight':
+                    const knightMoves = [
+                        [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+                        [1, -2], [1, 2], [2, -1], [2, 1]
+                    ];
+                    for (const [dr, dc] of knightMoves) {
+                        if (isInBounds(row + dr, col + dc)) {
+                            cells.push(gameState.board[row + dr][col + dc]);
+                        }
+                    }
+                    break;
+                
+                case 'bishop':
+                    const bishopDirs = [[1,1], [1,-1], [-1,1], [-1,-1]];
+                    for (const [dr, dc] of bishopDirs) {
+                        let r = row + dr, c = col + dc;
+                        while (isInBounds(r, c)) {
+                            cells.push(gameState.board[r][c]);
+                            if (!gameState.board[r][c].isOpen) break;
+                            r += dr;
+                            c += dc;
+                        }
+                    }
+                    break;
+                
+                case 'rook':
+                    const rookDirs = [[1,0], [-1,0], [0,1], [0,-1]];
+                    for (const [dr, dc] of rookDirs) {
+                        let r = row + dr, c = col + dc;
+                        while (isInBounds(r, c)) {
+                            cells.push(gameState.board[r][c]);
+                            if (!gameState.board[r][c].isOpen) break;
+                            r += dr;
+                            c += dc;
+                        }
+                    }
+                    break;
+                
+                case 'queen':
+                    const queenDirs = [[1,1], [1,-1], [-1,1], [-1,-1], [1,0], [-1,0], [0,1], [0,-1]];
+                    for (const [dr, dc] of queenDirs) {
+                        let r = row + dr, c = col + dc;
+                        while (isInBounds(r, c)) {
+                            cells.push(gameState.board[r][c]);
+                            if (!gameState.board[r][c].isOpen) break;
+                            r += dr;
+                            c += dc;
+                        }
+                    }
+                    break;
+                
+                case 'king':
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            if (dr === 0 && dc === 0) continue;
+                            if (isInBounds(row + dr, col + dc)) {
+                                cells.push(gameState.board[row + dr][col + dc]);
+                            }
+                        }
+                    }
+                    break;
+            }
+            
+            return cells;
+        }
+
+        // ============ RULES ============
+        function getValidMoves(piece) {
+            const moves = [];
+            
+            switch (piece.type) {
+                case 'pawn':
+                    moves.push(...getPawnMoves(piece));
+                    break;
+                case 'knight':
+                    moves.push(...getKnightMoves(piece));
+                    break;
+                case 'bishop':
+                    moves.push(...getBishopMoves(piece));
+                    break;
+                case 'rook':
+                    moves.push(...getRookMoves(piece));
+                    break;
+                case 'queen':
+                    moves.push(...getQueenMoves(piece));
+                    break;
+                case 'king':
+                    moves.push(...getKingMoves(piece));
+                    break;
+            }
+            
+            return moves;
+        }
+
+        function getPawnMoves(piece) {
+            const moves = [];
+            const { row, col, color } = piece;
+            const dir = color === 'white' ? 1 : -1;
+            const startRow = color === 'white' ? 1 : 6;
+            
+            // Вперёд
+            if (isInBounds(row + dir, col)) {
+                const cell = gameState.board[row + dir][col];
+                if (!cell.pieceId) {
+                    moves.push(cell);
+                    
+                    // Двойной ход со старта
+                    if (row === startRow) {
+                        const cell2 = gameState.board[row + 2 * dir][col];
+                        if (!cell2.pieceId) {
+                            moves.push(cell2);
+                        }
+                    }
+                }
+            }
+            
+            // Взятие по диагонали
+            for (const dc of [-1, 1]) {
+                if (isInBounds(row + dir, col + dc)) {
+                    const cell = gameState.board[row + dir][col + dc];
+                    if (cell.pieceId) {
+                        const targetPiece = gameState.pieces[cell.pieceId];
+                        if (targetPiece && targetPiece.color !== color) {
+                            moves.push(cell);
+                        }
+                    }
+                }
+            }
+            
+            return moves;
+        }
+
+        function getKnightMoves(piece) {
+            const moves = [];
+            const { row, col, color } = piece;
+            const knightMoves = [
+                [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+                [1, -2], [1, 2], [2, -1], [2, 1]
+            ];
+            
+            for (const [dr, dc] of knightMoves) {
+                if (isInBounds(row + dr, col + dc)) {
+                    const cell = gameState.board[row + dr][col + dc];
+                    if (!cell.pieceId) {
+                        moves.push(cell);
+                    } else {
+                        const targetPiece = gameState.pieces[cell.pieceId];
+                        if (targetPiece && targetPiece.color !== color) {
+                            moves.push(cell);
+                        }
+                    }
+                }
+            }
+            
+            return moves;
+        }
+
+        function getBishopMoves(piece) {
+            return getSlidingMoves(piece, [[1,1], [1,-1], [-1,1], [-1,-1]]);
+        }
+
+        function getRookMoves(piece) {
+            return getSlidingMoves(piece, [[1,0], [-1,0], [0,1], [0,-1]]);
+        }
+
+        function getQueenMoves(piece) {
+            // Проверка ослабления
+            if (piece.status.weakenedTurns > 0) {
+                if (piece.status.weakenedMode === 'diagonal') {
+                    return getRookMoves(piece);
+                } else {
+                    return getBishopMoves(piece);
+                }
+            }
+            
+            return getSlidingMoves(piece, [
+                [1,1], [1,-1], [-1,1], [-1,-1],
+                [1,0], [-1,0], [0,1], [0,-1]
+            ]);
+        }
+
+        function getKingMoves(piece) {
+            const moves = [];
+            const { row, col, color } = piece;
+            
+            // Обычные ходы короля
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    if (isInBounds(row + dr, col + dc)) {
+                        const cell = gameState.board[row + dr][col + dc];
+                        
+                        // Король НЕ МОЖЕТ наступить на открытую мину
+                        if (cell.isOpen && cell.hasMine) continue;
+                        
+                        if (!cell.pieceId) {
+                            moves.push(cell);
+                        } else {
+                            const targetPiece = gameState.pieces[cell.pieceId];
+                            if (targetPiece && targetPiece.color !== color) {
+                                moves.push(cell);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // ОШИБКА #6: Рокировка - отдельный тип хода
+            if (canCastle(piece, 'short')) {
+                moves.push({
+                    row: row,
+                    col: 6,
+                    type: 'castle-short'
+                });
+            }
+            
+            if (canCastle(piece, 'long')) {
+                moves.push({
+                    row: row,
+                    col: 2,
+                    type: 'castle-long'
+                });
+            }
+            
+            return moves;
+        }
+
+        function getSlidingMoves(piece, directions) {
+            const moves = [];
+            const { row, col, color } = piece;
+            
+            for (const [dr, dc] of directions) {
+                let r = row + dr;
+                let c = col + dc;
+                
+                while (isInBounds(r, c)) {
+                    const cell = gameState.board[r][c];
+                    
+                    if (!cell.pieceId) {
+                        moves.push(cell);
+                    } else {
+                        const targetPiece = gameState.pieces[cell.pieceId];
+                        if (targetPiece && targetPiece.color !== color) {
+                            moves.push(cell);
+                        }
+                        break;
+                    }
+                    
+                    r += dr;
+                    c += dc;
+                }
+            }
+            
+            return moves;
+        }
+
+        function isInBounds(row, col) {
+            return row >= 0 && row < 8 && col >= 0 && col < 8;
+        }
+
+        // ============ CASTLING (РОКИРОВКА) ============
+        function getPieceAt(row, col) {
+            const cell = gameState.board[row][col];
+            if (!cell.pieceId) return null;
+            return gameState.pieces[cell.pieceId];
+        }
+
+        function isSquareAttacked(row, col, kingColor) {
+            // Проверяем, атакуется ли клетка фигурами противника
+            const opponentColor = kingColor === 'white' ? 'black' : 'white';
+            
+            for (const pieceId in gameState.pieces) {
+                const piece = gameState.pieces[pieceId];
+                if (!piece.alive || piece.color !== opponentColor) continue;
+                
+                const moves = getValidMoves(piece);
+                if (moves.some(m => m.row === row && m.col === col)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        function isKingInCheck(king) {
+            return isSquareAttacked(king.row, king.col, king.color);
+        }
+
+        function canCastle(king, side) {
+            if (king.hasMoved) return false;
+            if (isKingInCheck(king)) return false;
+            
+            const row = king.row;
+            const rookCol = side === 'short' ? 7 : 0;
+            const rookCell = gameState.board[row][rookCol];
+            
+            // ОШИБКА #7: Правильный доступ через board
+            if (!rookCell.pieceId) return false;
+            
+            const rook = gameState.pieces[rookCell.pieceId];
+            if (rook.type !== 'rook' || rook.hasMoved) return false;
+            
+            // ОШИБКА #3: Проверяем только клетки пути короля
+            const path = side === 'short' ? [5, 6] : [3, 2];
+            
+            for (const col of path) {
+                // Клетка должна быть пустой
+                if (gameState.board[row][col].pieceId) return false;
+                
+                // ОШИБКА #2: Проверки ДО движения
+                if (isSquareAttacked(row, col, king.color)) return false;
+                
+                // ОШИБКА #5: MineChess - запрет только на ОТКРЫТЫЕ мины
+                if (gameState.board[row][col].isOpen && gameState.board[row][col].hasMine) return false;
+            }
+            
+            return true;
+        }
+
+        function doCastle(king, side) {
+            const row = king.row;
+            const fromKingCell = gameState.board[row][king.col];
+            
+            if (side === 'short') {
+                // Короткая рокировка O-O
+                const rookCell = gameState.board[row][7];
+                const rook = gameState.pieces[rookCell.pieceId];  // Через board!
+                
+                // Двигаем короля e1 → g1
+                fromKingCell.pieceId = null;
+                gameState.board[row][6].pieceId = king.id;
+                king.row = row;
+                king.col = 6;
+                king.hasMoved = true;  // ОШИБКА #1
+                
+                // Двигаем ладью h1 → f1
+                rookCell.pieceId = null;
+                gameState.board[row][5].pieceId = rook.id;
+                rook.row = row;
+                rook.col = 5;
+                rook.hasMoved = true;  // ОШИБКА #1
+            } else {
+                // Длинная рокировка O-O-O
+                const rookCell = gameState.board[row][0];
+                const rook = gameState.pieces[rookCell.pieceId];  // Через board!
+                
+                // Двигаем короля e1 → c1
+                fromKingCell.pieceId = null;
+                gameState.board[row][2].pieceId = king.id;
+                king.row = row;
+                king.col = 2;
+                king.hasMoved = true;  // ОШИБКА #1
+                
+                // Двигаем ладью a1 → d1
+                rookCell.pieceId = null;
+                gameState.board[row][3].pieceId = rook.id;
+                rook.row = row;
+                rook.col = 3;
+                rook.hasMoved = true;  // ОШИБКА #1
+            }
+            
+            // Открываем клетку куда встал король
+            openCell(gameState.board[king.row][king.col]);
+            
+            // ОШИБКА #2: endTurn вызывается ПОСЛЕ всех действий
+            endTurn();
+        }
+
+        function checkGameOver() {
+            let whiteKingAlive = false;
+            let blackKingAlive = false;
+            
+            for (const pieceId in gameState.pieces) {
+                const piece = gameState.pieces[pieceId];
+                if (piece.type === 'king' && piece.alive) {
+                    if (piece.color === 'white') whiteKingAlive = true;
+                    if (piece.color === 'black') blackKingAlive = true;
+                }
+            }
+            
+            if (!whiteKingAlive) {
+                endGame('black');
+            } else if (!blackKingAlive) {
+                endGame('white');
+            }
+        }
+
+        function endGame(winner) {
+            gameState.gameOver = true;
+            
+            const modal = document.getElementById('gameOverModal');
+            const title = document.getElementById('modalTitle');
+            const text = document.getElementById('modalText');
+            const t = translations[currentLang];
+            
+            title.textContent = winner === 'white' ? t.victoryWhite : t.victoryBlack;
+            text.textContent = winner === 'white' ? t.victoryTextWhite : t.victoryTextBlack;
+            
+            modal.classList.add('active');
+        }
+
+        // ============ RENDER ============
+        function renderBoard() {
+            const boardElement = document.getElementById('chessBoard');
+            boardElement.innerHTML = '';
+            
+            for (let row = 7; row >= 0; row--) {
+                for (let col = 0; col < 8; col++) {
+                    const cell = gameState.board[row][col];
+                    const cellDiv = document.createElement('div');
+                    
+                    cellDiv.className = 'cell';
+                    cellDiv.className += (row + col) % 2 === 0 ? ' white' : ' black';
+                    cellDiv.dataset.row = row;
+                    cellDiv.dataset.col = col;
+                    
+                    // Закрытая клетка
+                    if (!cell.isOpen) {
+                        cellDiv.classList.add('closed');
+                    }
+                    
+                    // Флажок (всегда виден поверх всего!)
+                    if (cell.isFlagged) {
+                        cellDiv.classList.add('flagged');
+                    }
+                    
+                    // Число мин - КРИТИЧНО: показываем ВСЕГДА на открытых клетках!
+                    if (cell.isOpen && cell.minesAround > 0) {
+                        cellDiv.classList.add('mine-number', `n${cell.minesAround}`);
+                    }
+                    
+                    // DEBUG: показать мины
+                    if (gameState.showMines && cell.hasMine) {
+                        cellDiv.classList.add('show-mine');
+                    }
+                    
+                    // Фигура
+                    if (cell.pieceId) {
+                        const piece = gameState.pieces[cell.pieceId];
+                        if (piece && piece.alive) {
+                            cellDiv.textContent = PIECE_SYMBOLS[piece.color][piece.type];
+                            cellDiv.classList.add(`piece-${piece.color}`);
+                            
+                            // Статус фигуры
+                            if (piece.status.skipTurns > 0) {
+                                cellDiv.classList.add('damaged');
+                            }
+                            if (piece.status.weakenedTurns > 0) {
+                                cellDiv.classList.add('weakened');
+                            }
+                            
+                            // Нельзя выбрать
+                            if (!canSelectPiece(piece)) {
+                                cellDiv.classList.add('disabled');
+                            }
+                        }
+                    }
+                    
+                    cellDiv.onclick = () => handleCellClick(row, col);
+                    boardElement.appendChild(cellDiv);
+                }
+            }
+        }
+
+        function handleCellClick(row, col) {
+            if (gameState.gameOver) return;
+            
+            const cell = gameState.board[row][col];
+            
+            if (gameState.mode === 'move') {
+                handleMoveMode(cell);
+            } else if (gameState.mode === 'scout') {
+                handleScoutMode(cell);
+            } else if (gameState.mode === 'flag') {
+                handleFlagMode(cell);
+            }
+        }
+
+        function handleFlagMode(cell) {
+            // Можно ставить флажки только на закрытые клетки
+            if (!cell.isOpen && !cell.pieceId) {
+                cell.isFlagged = !cell.isFlagged;  // Переключаем
+                renderBoard();
+            }
+        }
+
+        function handleMoveMode(cell) {
+            if (gameState.selectedPiece) {
+                // Уже выбрана фигура - пытаемся сделать ход
+                const piece = gameState.pieces[gameState.selectedPiece];
+                const fromCell = gameState.board[piece.row][piece.col];
+                const validMoves = getValidMoves(piece);
+                
+                // Находим ход, который соответствует кликнутой клетке
+                const move = validMoves.find(m => m.row === cell.row && m.col === cell.col);
+                
+                if (move) {
+                    // ЗАПРЕТ: нельзя ходить на флажки (игрок пометил как мину)
+                    if (cell.isFlagged) {
+                        gameState.selectedPiece = null;
+                        renderBoard();
+                        return;
+                    }
+                    
+                    // ЗАПРЕТ: король не может на открытую мину
+                    if (piece.type === 'king' && cell.isOpen && cell.hasMine) {
+                        gameState.selectedPiece = null;
+                        renderBoard();
+                        return;
+                    }
+                    
+                    // Рокировка
+                    if (move.type === 'castle-short') {
+                        doCastle(piece, 'short');
+                        gameState.selectedPiece = null;
+                        renderBoard();
+                        return;
+                    }
+                    if (move.type === 'castle-long') {
+                        doCastle(piece, 'long');
+                        gameState.selectedPiece = null;
+                        renderBoard();
+                        return;
+                    }
+                    
+                    // Обычный ход
+                    makeMove(piece, fromCell, cell);
+                } else {
+                    gameState.selectedPiece = null;
+                    renderBoard();
+                }
+            } else {
+                // Выбираем фигуру
+                if (cell.pieceId) {
+                    const piece = gameState.pieces[cell.pieceId];
+                    
+                    if (!canSelectPiece(piece)) {
+                        if (piece.status.skipTurns > 0) {
+                            alert(translations[currentLang].damagedPiece);
+                        }
+                        return;
+                    }
+                    
+                    gameState.selectedPiece = piece.id;
+                    highlightMoves(piece);
+                }
+            }
+        }
+
+        function handleScoutMode(cell) {
+            if (gameState.selectedPiece) {
+                // Выбрана фигура - разведываем
+                const piece = gameState.pieces[gameState.selectedPiece];
+                const scoutCells = getScoutCells(piece);
+                
+                if (scoutCells.some(c => c.row === cell.row && c.col === cell.col)) {
+                    scoutCell(piece, cell);
+                } else {
+                    gameState.selectedPiece = null;
+                    renderBoard();
+                }
+            } else {
+                // Выбираем фигуру для разведки
+                if (cell.pieceId) {
+                    const piece = gameState.pieces[cell.pieceId];
+                    
+                    if (!canSelectPiece(piece)) {
+                        if (piece.status.skipTurns > 0) {
+                            alert(translations[currentLang].damagedPiece);
+                        }
+                        return;
+                    }
+                    
+                    gameState.selectedPiece = piece.id;
+                    highlightScoutArea(piece);
+                }
+            }
+        }
+
+        function highlightMoves(piece) {
+            renderBoard();
+            
+            const cellDiv = document.querySelector(`[data-row="${piece.row}"][data-col="${piece.col}"]`);
+            cellDiv.classList.add('selected');
+            
+            const validMoves = getValidMoves(piece);
+            validMoves.forEach(cell => {
+                const moveDiv = document.querySelector(`[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                
+                // Запрет на ходы:
+                // 1. Король не может на открытую мину
+                // 2. НИКТО не может на флажок (игрок пометил как мину!)
+                if ((piece.type === 'king' && cell.isOpen && cell.hasMine) || cell.isFlagged) {
+                    moveDiv.classList.add('forbidden');
+                } else {
+                    moveDiv.classList.add('highlighted');
+                }
+            });
+        }
+
+        function highlightScoutArea(piece) {
+            renderBoard();
+            
+            const cellDiv = document.querySelector(`[data-row="${piece.row}"][data-col="${piece.col}"]`);
+            cellDiv.classList.add('selected');
+            
+            const scoutCells = getScoutCells(piece);
+            scoutCells.forEach(cell => {
+                const scoutDiv = document.querySelector(`[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                scoutDiv.classList.add('scout-highlight');
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('totalMines').textContent = gameState.stats.totalMines;
+            document.getElementById('foundMines').textContent = gameState.stats.foundMines;
+            document.getElementById('explodedMines').textContent = gameState.stats.explodedMines;
+            
+            let closedCount = 0;
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (!gameState.board[row][col].isOpen) closedCount++;
+                }
+            }
+            document.getElementById('closedCells').textContent = closedCount;
+        }
+
+        function updateTurnIndicator() {
+            const indicator = document.getElementById('turnIndicator');
+            const t = translations[currentLang];
+            indicator.textContent = gameState.currentPlayer === 'white' ? t.turnWhite : t.turnBlack;
+        }
+
+        // ============ GAME ============
+        function setMode(mode) {
+            gameState.mode = mode;
+            gameState.selectedPiece = null;
+            
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            renderBoard();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverModal').classList.remove('active');
+            document.getElementById('guideModal').classList.remove('active');
+            initGame();
+        }
+
+        function toggleGuide() {
+            document.getElementById('guideModal').classList.toggle('active');
+        }
+
+        function toggleMines() {
+            gameState.showMines = !gameState.showMines;
+            renderBoard();
+        }
+
+        // Запуск игры
+        lucide.createIcons();
+        updateTranslations();
+        initGame();
+    </script>
+</body>
+</html>

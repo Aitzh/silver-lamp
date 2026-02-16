@@ -1,0 +1,27 @@
+{
+  "name": "coffee-books-ai",
+  "version": "2.0.0",
+  "description": "AI-powered content recommendation platform",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "bot": "python3 admin_telegram_bot.py",
+    "setup": "python3 setup_access_database.py",
+    "start:all": "npm run start & npm run bot"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["ai", "recommendations", "books", "movies", "music"],
+  "author": "Aitzhan",
+  "license": "MIT"
+}

@@ -1,0 +1,31 @@
+{
+  "apps": [
+    {
+      "name": "coffee-books-api",
+      "script": "server.js",
+      "cwd": "/var/www/coffee-ai",
+      "watch": false,
+      "autorestart": true,
+      "instances": 1,
+      "max_memory_restart": "500M",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    {
+      "name": "coffee-books-bot",
+      "script": "admin_telegram_bot.py",
+      "interpreter": "/var/www/coffee-ai/venv/bin/python",
+      "cwd": "/var/www/coffee-ai",
+      "watch": false,
+      "autorestart": true,
+      "instances": 1,
+      "max_memory_restart": "500M",
+      "env": {
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONUNBUFFERED": "1",
+        "BOT_ENV": "production"
+      }
+    }
+  ]
+}
