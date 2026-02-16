@@ -133,11 +133,12 @@ class Database:
         cursor = conn.cursor()
         
         # Используем current_activations для подсчёта использованных
+# Используем COALESCE для обработки пустых значений (NULL)
         cursor.execute('''
             SELECT 
                 COUNT(*) as total,
-                SUM(CASE WHEN current_activations >= max_activations THEN 1 ELSE 0 END) as used,
-                SUM(CASE WHEN current_activations < max_activations THEN 1 ELSE 0 END) as unused
+                SUM(CASE WHEN current_activations >= COALESCE(max_activations, 1) THEN 1 ELSE 0 END) as used,
+                SUM(CASE WHEN current_activations < COALESCE(max_activations, 1) THEN 1 ELSE 0 END) as unused
             FROM access_codes
         ''')
         total_stats = cursor.fetchone()

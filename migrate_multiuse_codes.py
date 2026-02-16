@@ -36,7 +36,7 @@ def migrate():
         
         changes_made = False
         
-        # Добавляем max_activations если не существует
+        # 1. Добавляем колонки, если их нет
         if 'max_activations' not in columns:
             print("➕ Добавляем поле: max_activations")
             cursor.execute('''
@@ -47,7 +47,6 @@ def migrate():
         else:
             print("✓ Поле max_activations уже существует")
         
-        # Добавляем current_activations если не существует
         if 'current_activations' not in columns:
             print("➕ Добавляем поле: current_activations")
             cursor.execute('''
@@ -59,32 +58,34 @@ def migrate():
             print("✓ Поле current_activations уже существует")
         
         if changes_made:
-            # Обновляем существующие коды: ставим лимит 1 и текущие активации
-            print("🔧 Обновляем существующие коды...")
-            cursor.execute('''
-                UPDATE access_codes 
-                SET 
-                    max_activations = 1,
-                    current_activations = CASE WHEN is_used = 1 THEN 1 ELSE 0 END
-                WHERE max_activations IS NULL
-            ''')
-            
-            conn.commit()
-            print("\n✅ Миграция успешно выполнена!")
+            print("✅ Структура таблицы обновлена (добавлены новые колонки).")
         else:
-            print("\n✅ База данных уже актуальна, изменения не требуются")
+            print("ℹ️ Структура таблицы уже актуальна.")
+
+        # 2. БЕЗУСЛОВНОЕ ОБНОВЛЕНИЕ ДАННЫХ
+        # Исправляем NULL значения для старых кодов, чтобы они стали корректными одноразовыми
+        print("🔧 Проверка и исправление данных в существующих кодах...")
+        cursor.execute('''
+            UPDATE access_codes 
+            SET 
+                max_activations = 1,
+                current_activations = CASE WHEN is_used = 1 THEN 1 ELSE 0 END
+            WHERE max_activations IS NULL
+        ''')
         
-        # Показываем статистику
+        conn.commit()
+        print("✅ Данные синхронизированы.")
+        
+        # 3. Показываем статистику
         cursor.execute('SELECT COUNT(*) FROM access_codes')
         total_codes = cursor.fetchone()[0]
         
         cursor.execute('SELECT COUNT(*) FROM access_codes WHERE max_activations IS NOT NULL')
-        multiuse_codes = cursor.fetchone()[0]
+        processed_codes = cursor.fetchone()[0]
         
-        print(f"\n📊 Статистика:")
-        print(f"   Всего кодов: {total_codes}")
-        print(f"   Многоразовых кодов: {multiuse_codes}")
-        print(f"   Одноразовых кодов: {total_codes - multiuse_codes}")
+        print(f"\n📊 Статистика после миграции:")
+        print(f"   Всего кодов в базе: {total_codes}")
+        print(f"   Кодов с настроенным лимитом: {processed_codes}")
         
         conn.close()
         return True
@@ -105,7 +106,7 @@ if __name__ == "__main__":
     
     print("\n" + "=" * 60)
     if success:
-        print("✅ Готово! Теперь можно генерировать многоразовые коды.")
+        print("✅ Готово! Теперь база поддерживает многоразовые коды.")
     else:
-        print("❌ Миграция не выполнена. Проверьте ошибки выше.")
+        print("❌ Миграция завершилась с ошибкой.")
     print("=" * 60)

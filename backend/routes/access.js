@@ -78,13 +78,12 @@ router.post("/verify", async (req, res) => {
         `, [sessionToken, accessCode.id, expiresAt.toISOString()]);
 
         // Увеличиваем активацию
+        // После успешной проверки кода:
         await dbRun(`
-            UPDATE access_codes
+            UPDATE access_codes 
             SET current_activations = current_activations + 1,
-                used_at = CASE 
-                    WHEN current_activations = 0 THEN CURRENT_TIMESTAMP
-                    ELSE used_at
-                END
+                is_used = 1,
+                used_at = CURRENT_TIMESTAMP
             WHERE id = ?
         `, [accessCode.id]);
 
