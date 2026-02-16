@@ -91,10 +91,10 @@ router.post("/verify", async (req, res) => {
             success: true,
             sessionToken,
             expiresAt: expiresAt.toISOString(),
-            remainingActivations:
-                accessCode.max_activations - (accessCode.current_activations + 1)
+            // Используем maxActs, чтобы избежать ошибок с NULL
+            remainingActivations: maxActs - (currentActs + 1)
         });
-
+        
     } catch (err) {
         console.error(err);
         return res.status(500).json({
