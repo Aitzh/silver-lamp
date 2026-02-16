@@ -80,14 +80,14 @@ router.post("/verify", async (req, res) => {
         // Увеличиваем активацию
         // После успешной проверки кода:
         // Увеличиваем активацию
-        await dbRun(`
-            UPDATE access_codes 
-            SET current_activations = current_activations + 1,
-                -- Ставим 1, только если следующая активация достигнет лимита
-                is_used = CASE WHEN (current_activations + 1) >= COALESCE(max_activations, 1) THEN 1 ELSE 0 END,
-                used_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        `, [accessCode.id]);
+            await dbRun(`
+                UPDATE access_codes 
+                SET current_activations = current_activations + 1,
+                    -- Ставим 1, ТОЛЬКО если это была ПОСЛЕДНЯЯ возможная активация
+                    is_used = CASE WHEN (current_activations + 1) >= COALESCE(max_activations, 1) THEN 1 ELSE 0 END,
+                    used_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [accessCode.id]);
 
     return res.json({
             success: true,

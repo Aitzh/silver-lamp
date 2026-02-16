@@ -26,7 +26,8 @@ def create_access_database():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # ============ ТАБЛИЦА: access_codes ============
+# ============ ТАБЛИЦА: access_codes ============
+    # Обновленная версия с поддержкой многоразовых кодов
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS access_codes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,7 +40,9 @@ def create_access_database():
             used_at TIMESTAMP,
             used_by_session TEXT,
             expires_at TIMESTAMP,
-            notes TEXT
+            notes TEXT,
+            max_activations INTEGER DEFAULT 1,     -- Новое поле
+            current_activations INTEGER DEFAULT 0  -- Новое поле
         )
     ''')
     

@@ -1,4 +1,4 @@
-// server.js - ИСПРАВЛЕННЫЙ ГЛАВНЫЙ СЕРВЕР Coffee Books AI
+// server.js - ИСПРАВЛЕННЫЙ (Версия с поддержкой многоразовых кодов)
 import express from "express";
 import cookieParser from "cookie-parser";
 import "dotenv/config";
@@ -40,14 +40,70 @@ const ACCESS_DB = process.env.ACCESS_DB_PATH || path.join(__dirname, "access.db"
 // Проверяем/создаём БД
 if (!fs.existsSync(ACCESS_DB)) {
     console.warn(`⚠️ База данных не найдена: ${ACCESS_DB}`);
-    console.warn(`   Запустите: python setup_access_database.py`);
+    console.warn(`   Создаю пустую базу...`);
 }
 
-const db = new sqlite3.Database(ACCESS_DB, (err) => {
+const db = new sqlite3.Database(ACCESS_DB, async (err) => {
     if (err) {
         console.error('❌ Ошибка подключения к access.db:', err.message);
     } else {
         console.log('✅ Подключено к access.db');
+        // АВТОМАТИЧЕСКАЯ МИГРАЦИЯ ПРИ ЗАПУСКЕ
+        // Это чинит базу, если в ней нет колонок для многоразовости
+        try {
+            const run = promisify(db.run.bind(db));
+            
+            // Создаем таблицу, если нет
+            await run(`
+                CREATE TABLE IF NOT EXISTS access_codes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    code TEXT UNIQUE NOT NULL,
+                    code_type TEXT NOT NULL CHECK(code_type IN ('1day', '7days', '30days')),
+                    duration_hours INTEGER NOT NULL,
+                    generated_by TEXT,
+                    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    is_used INTEGER DEFAULT 0,
+                    used_at TIMESTAMP,
+                    used_by_session TEXT,
+                    expires_at TIMESTAMP,
+                    notes TEXT,
+                    max_activations INTEGER DEFAULT 1,
+                    current_activations INTEGER DEFAULT 0
+                )
+            `);
+
+            // Добавляем колонки, если их нет (игнорируем ошибку, если есть)
+            try { await run("ALTER TABLE access_codes ADD COLUMN max_activations INTEGER DEFAULT 1"); console.log("🔧 DB: Добавлена колонка max_activations"); } catch(e) {}
+            try { await run("ALTER TABLE access_codes ADD COLUMN current_activations INTEGER DEFAULT 0"); console.log("🔧 DB: Добавлена колонка current_activations"); } catch(e) {}
+            
+            // Создаем остальные таблицы
+            await run(`CREATE TABLE IF NOT EXISTS user_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_token TEXT UNIQUE NOT NULL,
+                access_code_id INTEGER,
+                ip_address TEXT,
+                user_agent TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                is_active INTEGER DEFAULT 1,
+                last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                codes_generated_count INTEGER DEFAULT 0,
+                FOREIGN KEY (access_code_id) REFERENCES access_codes(id)
+            )`);
+            
+            await run(`CREATE TABLE IF NOT EXISTS activity_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_token TEXT,
+                action TEXT NOT NULL,
+                details TEXT,
+                ip_address TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_token) REFERENCES user_sessions(session_token)
+            )`);
+
+        } catch (dbErr) {
+            console.error("Ошибка авто-миграции:", dbErr);
+        }
     }
 });
 
@@ -68,7 +124,6 @@ function rateLimitMiddleware(maxAttempts, windowMs) {
         const ip = req.ip || req.connection.remoteAddress;
         const now = Date.now();
         
-        // Очистка старых записей
         for (const [key, data] of rateLimitStore.entries()) {
             if (now - data.timestamp > windowMs) {
                 rateLimitStore.delete(key);
@@ -132,7 +187,6 @@ function formatTime(seconds) {
 }
 
 // --- СТАТИЧЕСКИЕ ФАЙЛЫ ---
-// Публичные файлы (без авторизации)
 app.get('/login.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend/public/login.html'));
 });
@@ -147,7 +201,6 @@ app.get('/script.js', (req, res) => {
 
 // MineChess маршрут
 app.get('/minechess', async (req, res) => {
-    // Проверяем авторизацию для MineChess
     const sessionToken = req.cookies?.sessionToken || 
                         req.headers['x-session-token'] ||
                         req.query.token;
@@ -177,19 +230,15 @@ app.get('/minechess', async (req, res) => {
 });
 
 // --- ГЛАВНАЯ СТРАНИЦА ---
-// ИСПРАВЛЕНО: Проверяем токен из ЗАГОЛОВКА или QUERY, не только cookie
 app.get("/", async (req, res) => {
-    // Проверяем токен из разных источников
     const sessionToken = req.cookies?.sessionToken || 
                         req.headers['x-session-token'] ||
                         req.query.token;
     
-    // Если нет токена - отдаём страницу входа напрямую (не редирект!)
     if (!sessionToken) {
         return res.sendFile(path.join(__dirname, "frontend/public/login.html"));
     }
     
-    // Проверяем валидность токена
     try {
         const session = await dbGet(`
             SELECT * FROM user_sessions 
@@ -199,11 +248,9 @@ app.get("/", async (req, res) => {
         `, [sessionToken]);
         
         if (!session) {
-            // Токен невалидный - показываем страницу входа
             return res.sendFile(path.join(__dirname, "frontend/public/login.html"));
         }
         
-        // Токен валидный - показываем приложение
         res.sendFile(path.join(__dirname, "frontend/public/index.html"));
         
     } catch (err) {
@@ -216,10 +263,9 @@ app.get("/", async (req, res) => {
 // === API ДОСТУПА ===
 // ============================================================
 
-// Rate limit для проверки кодов
 app.use("/access/verify", rateLimitMiddleware(10, 60000));
 
-// POST /access/verify - Проверка кода доступа
+// POST /access/verify - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.post("/access/verify", async (req, res) => {
     try {
         const { code } = req.body;
@@ -245,34 +291,33 @@ app.post("/access/verify", async (req, res) => {
         
         console.log(`🔍 Проверка кода: ${cleanCode} (IP: ${ipAddress})`);
         
-        // Ищем код
+        // 1. Ищем код (без проверки is_used=0, проверяем это вручную ниже)
         const accessCode = await dbGet(`
-            SELECT * FROM access_codes 
-            WHERE code = ? AND is_used = 0
+            SELECT * FROM access_codes WHERE code = ?
         `, [cleanCode]);
         
         if (!accessCode) {
             await logActivity(null, 'code_verify_failed', cleanCode, ipAddress);
-            
-            // Проверяем использованный код
-            const usedCode = await dbGet(`
-                SELECT * FROM access_codes WHERE code = ? AND is_used = 1
-            `, [cleanCode]);
-            
-            if (usedCode) {
-                return res.status(401).json({ 
-                    error: "Этот код уже был использован",
-                    success: false 
-                });
-            }
-            
             return res.status(401).json({ 
                 error: "Код доступа не найден",
                 success: false 
             });
         }
+
+        // 2. Логика многоразовости
+        const maxActs = accessCode.max_activations || 1; // Если NULL, то 1
+        const currentActs = accessCode.current_activations || 0;
+
+        // Если код помечен как использованный И количество активаций достигло лимита
+        if (accessCode.is_used === 1 && currentActs >= maxActs) {
+             await logActivity(null, 'code_exhausted', cleanCode, ipAddress);
+             return res.status(401).json({ 
+                error: `Лимит активаций достигнут (${currentActs}/${maxActs})`,
+                success: false 
+            });
+        }
         
-        // Проверяем срок действия
+        // 3. Проверяем срок действия
         if (accessCode.expires_at) {
             const now = new Date();
             const expiresAt = new Date(accessCode.expires_at);
@@ -286,7 +331,7 @@ app.post("/access/verify", async (req, res) => {
             }
         }
         
-        // Создаём сессию
+        // 4. Создаём сессию
         const sessionToken = generateSessionToken();
         const sessionDurationMs = accessCode.duration_hours * 60 * 60 * 1000;
         const sessionExpiresAt = new Date(Date.now() + sessionDurationMs);
@@ -303,22 +348,24 @@ app.post("/access/verify", async (req, res) => {
             sessionExpiresAt.toISOString()
         ]);
         
-        // Помечаем код использованным
+        // 5. Обновляем статус кода (Счетчик +1)
+        // is_used ставим в 1 ТОЛЬКО если это была последняя активация
         await dbRun(`
             UPDATE access_codes 
-            SET is_used = 1, 
+            SET current_activations = current_activations + 1,
+                is_used = CASE WHEN (current_activations + 1) >= ? THEN 1 ELSE 0 END,
                 used_at = CURRENT_TIMESTAMP,
                 used_by_session = ?
             WHERE id = ?
-        `, [sessionToken, accessCode.id]);
+        `, [maxActs, sessionToken, accessCode.id]);
         
         await logActivity(sessionToken, 'code_verified', cleanCode, ipAddress);
         
-        console.log(`✅ Код подтверждён. Сессия: ${sessionToken.slice(0, 8)}...`);
+        console.log(`✅ Код подтверждён (${currentActs + 1}/${maxActs}). Сессия: ${sessionToken.slice(0, 8)}...`);
         
-        // ВАЖНО: Устанавливаем cookie!
+        // Cookie
         res.cookie('sessionToken', sessionToken, {
-            httpOnly: false, // Доступен для JS
+            httpOnly: false,
             maxAge: sessionDurationMs,
             sameSite: 'lax'
         });
@@ -328,7 +375,8 @@ app.post("/access/verify", async (req, res) => {
             sessionToken,
             expiresAt: sessionExpiresAt.toISOString(),
             duration: accessCode.duration_hours,
-            codeType: accessCode.code_type
+            codeType: accessCode.code_type,
+            remainingActivations: maxActs - (currentActs + 1)
         });
         
     } catch (err) {
@@ -340,51 +388,33 @@ app.post("/access/verify", async (req, res) => {
     }
 });
 
-// GET /access/status - Статус сессии
+// GET /access/status
 app.get("/access/status", async (req, res) => {
     try {
         const sessionToken = req.headers['x-session-token'] || 
                             req.cookies?.sessionToken;
         
         if (!sessionToken) {
-            return res.json({ 
-                authenticated: false,
-                requiresAuth: true 
-            });
+            return res.json({ authenticated: false, requiresAuth: true });
         }
         
         const session = await dbGet(`
-            SELECT 
-                s.*,
-                c.code_type,
-                c.duration_hours
+            SELECT s.*, c.code_type, c.duration_hours
             FROM user_sessions s
             LEFT JOIN access_codes c ON s.access_code_id = c.id
             WHERE s.session_token = ?
         `, [sessionToken]);
         
         if (!session) {
-            return res.json({ 
-                authenticated: false,
-                requiresAuth: true 
-            });
+            return res.json({ authenticated: false, requiresAuth: true });
         }
         
         const now = new Date();
         const expiresAt = new Date(session.expires_at);
         
         if (!session.is_active || now > expiresAt) {
-            await dbRun(`
-                UPDATE user_sessions 
-                SET is_active = 0 
-                WHERE session_token = ?
-            `, [sessionToken]);
-            
-            return res.json({ 
-                authenticated: false,
-                expired: true,
-                requiresAuth: true 
-            });
+            await dbRun(`UPDATE user_sessions SET is_active = 0 WHERE session_token = ?`, [sessionToken]);
+            return res.json({ authenticated: false, expired: true, requiresAuth: true });
         }
         
         const timeRemaining = Math.floor((expiresAt - now) / 1000);
@@ -400,25 +430,17 @@ app.get("/access/status", async (req, res) => {
         
     } catch (err) {
         console.error('❌ Status error:', err);
-        res.status(500).json({ 
-            error: "Ошибка сервера",
-            authenticated: false 
-        });
+        res.status(500).json({ error: "Ошибка сервера", authenticated: false });
     }
 });
 
-// POST /access/logout - Выход
+// POST /access/logout
 app.post("/access/logout", async (req, res) => {
     try {
         const sessionToken = req.headers['x-session-token'] || req.cookies?.sessionToken;
         
         if (sessionToken) {
-            await dbRun(`
-                UPDATE user_sessions 
-                SET is_active = 0 
-                WHERE session_token = ?
-            `, [sessionToken]);
-            
+            await dbRun(`UPDATE user_sessions SET is_active = 0 WHERE session_token = ?`, [sessionToken]);
             await logActivity(sessionToken, 'logout', null, req.ip);
         }
         
@@ -432,10 +454,9 @@ app.post("/access/logout", async (req, res) => {
 });
 
 // ============================================================
-// === РЕКОМЕНДАЦИИ (импорт из отдельного файла) ===
+// === РЕКОМЕНДАЦИИ ===
 // ============================================================
 
-// Динамический импорт для recommend_db
 let recommendRouter;
 try {
     const module = await import('./backend/routes/recommend_db.js');
@@ -444,69 +465,31 @@ try {
     console.log('✅ Модуль recommend_db загружен');
 } catch (err) {
     console.warn('⚠️ Модуль recommend_db не найден, используем встроенный');
-    
-    // Простой fallback
     app.post("/recommend/:type", (req, res) => {
-        res.json({
-            success: false,
-            error: "Модуль рекомендаций не настроен"
-        });
+        res.json({ success: false, error: "Модуль рекомендаций не настроен" });
     });
 }
 
 // ============================================================
-// === HEALTH CHECK ===
+// === ЗАПУСК ===
 // ============================================================
 
-app.get("/health", (req, res) => {
-    res.json({ 
-        status: "ok", 
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime()
-    });
-});
-
-// ============================================================
-// === ОБРАБОТКА ОШИБОК ===
-// ============================================================
+app.get("/health", (req, res) => res.json({ status: "ok", timestamp: new Date().toISOString() }));
 
 app.use((err, req, res, next) => {
     console.error("💥 Server Error:", err);
     res.status(500).json({ error: "Internal server error" });
 });
 
-// 404 - отдаём страницу входа для HTML запросов
 app.use((req, res) => {
-    if (req.accepts('html')) {
-        return res.sendFile(path.join(__dirname, "frontend/public/login.html"));
-    }
+    if (req.accepts('html')) return res.sendFile(path.join(__dirname, "frontend/public/login.html"));
     res.status(404).json({ error: "Not found" });
 });
 
-// ============================================================
-// === ЗАПУСК ===
-// ============================================================
-
 const PORT = config.port;
 app.listen(PORT, () => {
-    console.log(`\n🚀 ═══════════════════════════════════════════`);
-    console.log(`🚀 Coffee Books AI Server`);
-    console.log(`🚀 ═══════════════════════════════════════════`);
-    console.log(`📍 URL: http://localhost:${PORT}`);
-    console.log(`🔒 Авторизация: АКТИВНА`);
-    console.log(`\n📦 API статус:`);
-    console.log(`   ${config.googleBooks.key ? '✅' : '❌'} Google Books`);
-    console.log(`   ${config.tmdb.key ? '✅' : '❌'} TMDB`);
-    console.log(`   ${config.spotify.clientId ? '✅' : '❌'} Spotify`);
-    console.log(`   ${config.openRouter.key ? '✅' : '❌'} OpenRouter`);
-    console.log(`\n🎯 Endpoints:`);
-    console.log(`   GET  /              - Главная (с авторизацией)`);
-    console.log(`   POST /access/verify - Проверка кода`);
-    console.log(`   GET  /access/status - Статус сессии`);
-    console.log(`   POST /access/logout - Выход`);
-    console.log(`   POST /recommend/:type - Рекомендации`);
-    console.log(`   GET  /health        - Health check`);
-    console.log(`🚀 ═══════════════════════════════════════════\n`);
+    console.log(`\n🚀 Coffee Books AI Server запущен на порту ${PORT}`);
+    console.log(`🔒 Система авторизации обновлена (Многоразовые коды активны)`);
 });
 
 export { config };
