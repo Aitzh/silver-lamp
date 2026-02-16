@@ -79,22 +79,24 @@ router.post("/verify", async (req, res) => {
 
         // Увеличиваем активацию
         // После успешной проверки кода:
+        // Увеличиваем активацию
         await dbRun(`
             UPDATE access_codes 
-            SET current_activations = current_activations + 1,
-                is_used = 1,
+            SET 
+                current_activations = current_activations + 1,
+                -- Ставим is_used = 1 ТОЛЬКО когда лимит реально кончился
+                is_used = CASE WHEN (current_activations + 1) >= COALESCE(max_activations, 1) THEN 1 ELSE 0 END,
                 used_at = CURRENT_TIMESTAMP
             WHERE id = ?
         `, [accessCode.id]);
 
-        return res.json({
+    return res.json({
             success: true,
             sessionToken,
             expiresAt: expiresAt.toISOString(),
-            // Используем maxActs, чтобы избежать ошибок с NULL
+            // Используем переменные, которые точно числа
             remainingActivations: maxActs - (currentActs + 1)
-        });
-        
+    });
     } catch (err) {
         console.error(err);
         return res.status(500).json({
