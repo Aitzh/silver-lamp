@@ -82,9 +82,8 @@ router.post("/verify", async (req, res) => {
         // Увеличиваем активацию
         await dbRun(`
             UPDATE access_codes 
-            SET 
-                current_activations = current_activations + 1,
-                -- Ставим is_used = 1 ТОЛЬКО когда лимит реально кончился
+            SET current_activations = current_activations + 1,
+                -- Ставим 1, только если следующая активация достигнет лимита
                 is_used = CASE WHEN (current_activations + 1) >= COALESCE(max_activations, 1) THEN 1 ELSE 0 END,
                 used_at = CURRENT_TIMESTAMP
             WHERE id = ?
