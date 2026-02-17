@@ -10,7 +10,7 @@ const database = {
     ru: {
         nav: { books: "Книги", movies: "Фильмы", music: "Музыка" },
         static: {
-            subtitle: "Искусство подбора контента под ваш вкус",
+            subtitle: "Умная рекомендация на основе ваших предпочтений",
             coffeeLabel: "ВАШ НАПИТОК",
             btnText: "Подобрать коллекцию",
             footer: '',
@@ -79,7 +79,7 @@ const database = {
     en: {
         nav: { books: "Books", movies: "Movies", music: "Music" },
         static: {
-            subtitle: "Curated content for your coffee ritual",
+            subtitle: "Smart recommendations based on your preferences",
             coffeeLabel: "YOUR DRINK",
             btnText: "Curate Collection",
             footer: "",
@@ -148,7 +148,7 @@ const database = {
     kz: {
         nav: { books: "Кітаптар", movies: "Фильмдер", music: "Музыка" },
         static: {
-            subtitle: "Кофеңізге арналған идеалды контент",
+            subtitle: "Сіздің қалауыңызға негізделген ақылды ұсыныстар",
             coffeeLabel: "СІЗДІҢ ТАҢДАУ",
             btnText: "Жинақ құру",
             footer: "",
@@ -334,13 +334,13 @@ async function init() {
     // СНАЧАЛА проверяем авторизацию!
     const isAuthed = await checkAuth();
     if (!isAuthed) return;
-    const savedTheme = localStorage.getItem('theme') || 'dark';
+    const savedTheme = localStorage.getItem('theme') || 'light';
     document.body.setAttribute('data-theme', savedTheme);
     const savedLang = localStorage.getItem('currentLang') || 'ru';
     currentLang = savedLang;
-        document.querySelectorAll('.lang-btn').forEach(btn => {
+    document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.classList.remove('active');
-        if (btn.textContent.toLowerCase().includes(savedLang === 'ru' ? 'рус' : savedLang === 'en' ? 'eng' : 'қаз')) {
+        if (btn.getAttribute('data-lang') === savedLang) {
             btn.classList.add('active');
         }
     });
@@ -371,6 +371,7 @@ function renderFilters() {
     const container = document.getElementById('dynamic-filters');
     container.innerHTML = ''; 
     const sections = database[currentLang].data[currentCategory];
+    const VISIBLE_LIMIT = 5; // Сколько чипов показывать сразу
     
     sections.forEach(section => {
         const group = document.createElement('div');
@@ -380,6 +381,8 @@ function renderFilters() {
         header.innerHTML = `<span class="header-title">${section.title}</span>`;
         const row = document.createElement('div');
         row.className = 'chips-row';
+
+        const chips = [];
         
         section.items.forEach((item, idx) => {
             const chip = document.createElement('button');
@@ -391,6 +394,12 @@ function renderFilters() {
             chip.setAttribute('aria-pressed', isActive);
             chip.setAttribute('tabindex', '0');
             
+            // Скрываем чипы после лимита
+            if (idx >= VISIBLE_LIMIT) {
+                chip.style.display = 'none';
+                chip.dataset.hidden = 'true';
+            }
+
             chip.onclick = () => {
                 if (isMulti) {
                     chip.classList.toggle('active');
@@ -413,7 +422,45 @@ function renderFilters() {
             };
             
             row.appendChild(chip);
+            chips.push(chip);
         });
+
+        // Кнопка "Ещё" если чипов больше лимита
+        if (section.items.length > VISIBLE_LIMIT) {
+            const hiddenCount = section.items.length - VISIBLE_LIMIT;
+            const moreBtn = document.createElement('button');
+            moreBtn.className = 'chips-more-btn';
+            moreBtn.innerHTML = `<span class="more-label">+ ещё ${hiddenCount}</span>`;
+            moreBtn.setAttribute('aria-expanded', 'false');
+
+            moreBtn.onclick = () => {
+                const isExpanded = moreBtn.classList.contains('expanded');
+                if (!isExpanded) {
+                    // Показываем все
+                    chips.forEach(c => { if (c.dataset.hidden) c.style.display = ''; });
+                    moreBtn.innerHTML = `<span class="more-label">Скрыть</span>`;
+                    moreBtn.classList.add('expanded');
+                    moreBtn.setAttribute('aria-expanded', 'true');
+                } else {
+                    // Скрываем снова
+                    chips.forEach((c, i) => {
+                        if (i >= VISIBLE_LIMIT) {
+                            c.style.display = 'none';
+                            // Если активный скрытый — активируем первый
+                            if (c.classList.contains('active') && section.type !== 'multi') {
+                                chips[0].classList.add('active');
+                            }
+                        }
+                    });
+                    moreBtn.innerHTML = `<span class="more-label">+ ещё ${hiddenCount}</span>`;
+                    moreBtn.classList.remove('expanded');
+                    moreBtn.setAttribute('aria-expanded', 'false');
+                }
+            };
+
+            row.appendChild(moreBtn);
+        }
+
         group.appendChild(header);
         group.appendChild(row);
         container.appendChild(group);
@@ -423,9 +470,13 @@ function renderFilters() {
 /* --- 5. EVENT HANDLERS --- */
 function setLang(lang) {
     currentLang = lang;
-    localStorage.setItem('currentLang', lang); // Сохраняем язык
-    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    localStorage.setItem('currentLang', lang);
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-lang') === lang) {
+            btn.classList.add('active');
+        }
+    });
     updateInterface();
 }
 

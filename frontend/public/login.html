@@ -3,9 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coffee & AI - Вход</title>
+    <title>StudyWay & For You Coffee</title>
+    <link rel="icon" type="image/png" href="/logotip.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style>
+        /* ========== CSS-ПЕРЕМЕННЫЕ ДЛЯ ТЕМ ========== */
+        :root {
+            /* Светлая тема (по умолчанию) */
+            --bg-body-start: #F5EDE2;
+            --bg-body-end: #EDE0D0;
+            --container-bg: rgba(255, 248, 240, 0.88);
+            --container-border: rgba(212, 165, 116, 0.4);
+            --container-shadow: 0 32px 64px rgba(62, 47, 31, 0.15);
+            --glow-color: rgba(212, 165, 116, 0.12);
+            --text-main: #3E2F1F;
+            --text-muted: #8A7A6D;
+            --accent: #B89F8A;
+            --accent-gradient-start: #C4935A;
+            --accent-gradient-end: #D4A574;
+            --input-bg: rgba(0, 0, 0, 0.04);
+            --input-border: rgba(180, 130, 80, 0.35);
+            --input-color: #3E2F1F;
+            --input-placeholder: rgba(100, 80, 60, 0.45);
+            --input-focus-bg: rgba(212, 165, 116, 0.08);
+            --btn-text: #FFFFFF;
+            --error-bg: rgba(229, 80, 80, 0.12);
+            --error-border: rgba(229, 80, 80, 0.3);
+            --error-text: #C0392B;
+            --help-text: #8A7A6D;
+            --help-link: #B89F8A;
+        }
+
+        [data-theme="dark"] {
+            --bg-body-start: #0F0A07;
+            --bg-body-end: #1a1410;
+            --container-bg: rgba(45, 31, 24, 0.85);
+            --container-border: rgba(212, 165, 116, 0.25);
+            --container-shadow: 0 32px 64px rgba(0, 0, 0, 0.6);
+            --glow-color: rgba(212, 165, 116, 0.15);
+            --text-main: #F5E6D3;
+            --text-muted: #B89F8A;
+            --accent: #D4A574;
+            --accent-gradient-start: #D4A574;
+            --accent-gradient-end: #E8B923;
+            --input-bg: rgba(255, 255, 255, 0.03);
+            --input-border: rgba(212, 165, 116, 0.3);
+            --input-color: #F5E6D3;
+            --input-placeholder: rgba(184, 159, 138, 0.5);
+            --input-focus-bg: rgba(212, 165, 116, 0.1);
+            --btn-text: #0F0A07;
+            --error-bg: rgba(229, 80, 80, 0.15);
+            --error-border: rgba(229, 80, 80, 0.3);
+            --error-text: #ff7b7b;
+            --help-text: #B89F8A;
+            --help-link: #D4A574;
+        }
+
+        /* ========== БАЗОВЫЕ СТИЛИ ========== */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -14,25 +68,27 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0F0A07 0%, #1a1410 100%);
+            background: linear-gradient(135deg, var(--bg-body-start) 0%, var(--bg-body-end) 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            color: #F5E6D3;
+            color: var(--text-main);
+            transition: background 0.4s ease, color 0.4s ease;
         }
 
         .login-container {
             max-width: 480px;
             width: 90%;
-            background: rgba(45, 31, 24, 0.85);
+            background: var(--container-bg);
             backdrop-filter: blur(24px);
-            border: 1px solid rgba(212, 165, 116, 0.25);
+            border: 1px solid var(--container-border);
             border-radius: 32px;
             padding: 60px 40px;
-            box-shadow: 0 32px 64px rgba(0,0,0,0.6);
+            box-shadow: var(--container-shadow);
             position: relative;
             overflow: hidden;
+            transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
         }
 
         .login-container::before {
@@ -42,10 +98,11 @@
             left: -50%;
             width: 200%;
             height: 100%;
-            background: radial-gradient(circle at top center, rgba(212, 165, 116, 0.15) 0%, transparent 60%);
+            background: radial-gradient(circle at top center, var(--glow-color) 0%, transparent 60%);
             pointer-events: none;
         }
 
+        /* ========== ЛОГО И ЗАГОЛОВОК ========== */
         .logo-section {
             text-align: center;
             margin-bottom: 40px;
@@ -54,33 +111,40 @@
         }
 
         .logo-icon {
-            width: 80px;
-            height: 80px;
+            width: 100px;
+            height: 100px;
             margin: 0 auto 20px;
-            background: linear-gradient(135deg, #D4A574, #E8B923);
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 40px;
-            box-shadow: 0 10px 30px rgba(212, 165, 116, 0.3);
+        }
+
+        .logo-icon img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(212, 165, 116, 0.35));
+            border-radius: 20px;
         }
 
         h1 {
             font-family: 'Playfair Display', serif;
             font-size: 36px;
-            background: linear-gradient(90deg, #D4A574, #F5E6D3);
+            background: linear-gradient(90deg, var(--accent-gradient-start), var(--accent-gradient-end));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 10px;
         }
 
         .subtitle {
             font-size: 15px;
-            color: #B89F8A;
+            color: var(--text-muted);
             font-weight: 300;
+            transition: color 0.4s ease;
         }
 
+        /* ========== ФОРМА ========== */
         .form-section {
             position: relative;
             z-index: 1;
@@ -93,20 +157,21 @@
         label {
             display: block;
             font-size: 13px;
-            color: #D4A574;
+            color: var(--accent);
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 12px;
+            transition: color 0.4s ease;
         }
 
         .code-input {
             width: 100%;
             padding: 18px 20px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(212, 165, 116, 0.3);
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
             border-radius: 16px;
-            color: #F5E6D3;
+            color: var(--input-color);
             font-size: 20px;
             font-weight: 600;
             letter-spacing: 4px;
@@ -117,24 +182,24 @@
 
         .code-input:focus {
             outline: none;
-            border-color: #D4A574;
-            background: rgba(212, 165, 116, 0.1);
+            border-color: var(--accent);
+            background: var(--input-focus-bg);
             box-shadow: 0 0 20px rgba(212, 165, 116, 0.2);
         }
 
         .code-input::placeholder {
-            color: #B89F8A;
-            opacity: 0.5;
+            color: var(--input-placeholder);
             letter-spacing: 2px;
         }
 
+        /* ========== КНОПКА ========== */
         .login-btn {
             width: 100%;
             padding: 20px;
-            background: linear-gradient(135deg, #D4A574, #E8B923);
+            background: linear-gradient(135deg, var(--accent-gradient-start), var(--accent-gradient-end));
             border: none;
             border-radius: 50px;
-            color: #0F0A07;
+            color: var(--btn-text);
             font-size: 16px;
             font-weight: 700;
             letter-spacing: 0.5px;
@@ -167,7 +232,7 @@
             width: 20px;
             height: 20px;
             border: 2px solid rgba(15, 10, 7, 0.3);
-            border-top-color: #0F0A07;
+            border-top-color: var(--btn-text);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
@@ -176,16 +241,18 @@
             to { transform: translateY(-50%) rotate(360deg); }
         }
 
+        /* ========== СООБЩЕНИЕ ОБ ОШИБКЕ ========== */
         .error-message {
-            background: rgba(229, 80, 80, 0.15);
-            border: 1px solid rgba(229, 80, 80, 0.3);
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
             border-radius: 12px;
             padding: 15px;
             margin-top: 20px;
-            color: #ff7b7b;
+            color: var(--error-text);
             font-size: 14px;
             text-align: center;
             display: none;
+            transition: all 0.4s ease;
         }
 
         .error-message.show {
@@ -204,26 +271,28 @@
             }
         }
 
+        /* ========== ВСПОМОГАТЕЛЬНЫЙ ТЕКСТ ========== */
         .help-text {
             text-align: center;
             margin-top: 30px;
             font-size: 13px;
-            color: #B89F8A;
+            color: var(--help-text);
             line-height: 1.6;
+            transition: color 0.4s ease;
         }
 
         .help-text a {
-            color: #D4A574;
+            color: var(--help-link);
             text-decoration: none;
             border-bottom: 1px solid rgba(212, 165, 116, 0.3);
             transition: border-color 0.3s ease;
         }
 
         .help-text a:hover {
-            border-bottom-color: #D4A574;
+            border-bottom-color: var(--accent);
         }
 
-        /* Адаптив */
+        /* ========== АДАПТИВ ========== */
         @media (max-width: 600px) {
             .login-container {
                 padding: 40px 30px;
@@ -240,11 +309,11 @@
         }
     </style>
 </head>
-<body>
+<body data-theme="light">
     <div class="login-container">
         <div class="logo-section">
-            <div class="logo-icon">☕</div>
-            <h1>Coffee & AI</h1>
+            <div class="logo-icon"><img src="/logotip.png" alt="StudyWay Logo"></div>
+            <h1>StudyWay & For You Coffee</h1>
             <p class="subtitle">Введите код доступа</p>
         </div>
 
@@ -279,59 +348,38 @@
 
     <script>
         const loginForm = document.getElementById('loginForm');
-        const codeInput = document.getElementById('accessCode');
         const loginBtn = document.getElementById('loginBtn');
         const errorMessage = document.getElementById('errorMessage');
 
-        // Автоформатирование кода (XXXX-XXXX)
-        codeInput.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-            
-            if (value.length > 4) {
-                value = value.slice(0, 4) + '-' + value.slice(4, 8);
-            }
-            
-            e.target.value = value;
-        });
-
-        // Обработка отправки формы
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const code = codeInput.value.trim();
-            
-            if (code.length < 9) {
-                showError('Введите полный код доступа');
-                return;
-            }
 
-            // Показываем загрузку
-            loginBtn.classList.add('loading');
+            const accessCode = document.getElementById('accessCode').value.trim();
+            
+            if (!accessCode) return;
+
             loginBtn.disabled = true;
+            loginBtn.classList.add('loading');
             loginBtn.textContent = 'Проверка...';
             errorMessage.classList.remove('show');
 
             try {
                 const response = await fetch('/access/verify', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ code })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: accessCode })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    // Сохраняем токен сессии
-                    localStorage.setItem('sessionToken', data.sessionToken);
-                    localStorage.setItem('sessionExpiresAt', data.expiresAt);
-                    
-                    // Показываем успех
-                    loginBtn.textContent = '✓ Успешно!';
+                    if (data.sessionToken) {
+                        localStorage.setItem('sessionToken', data.sessionToken);
+                    }
+
+                    loginBtn.textContent = '✓ Добро пожаловать!';
                     loginBtn.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
                     
-                    // Перенаправляем на главную
                     setTimeout(() => {
                         window.location.href = '/';
                     }, 500);
@@ -367,15 +415,12 @@
 
             try {
                 const response = await fetch('/access/status', {
-                    headers: {
-                        'X-Session-Token': sessionToken
-                    }
+                    headers: { 'X-Session-Token': sessionToken }
                 });
 
                 const data = await response.json();
 
                 if (data.authenticated) {
-                    // Уже авторизован - редирект
                     window.location.href = '/';
                 }
                 
@@ -384,7 +429,6 @@
             }
         }
 
-        // Проверяем сессию при загрузке
         checkExistingSession();
     </script>
 </body>

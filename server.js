@@ -199,6 +199,21 @@ app.get('/script.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend/public/script.js'));
 });
 
+// Логотип — ищем в нескольких местах (корень, frontend/, frontend/public/)
+app.get('/logotip.png', (req, res) => {
+    const locations = [
+        path.join(__dirname, 'logotip.png'),
+        path.join(__dirname, 'frontend', 'logotip.png'),
+        path.join(__dirname, 'frontend', 'public', 'logotip.png'),
+    ];
+    for (const loc of locations) {
+        if (fs.existsSync(loc)) {
+            return res.sendFile(loc);
+        }
+    }
+    res.status(404).send('Logo not found');
+});
+
 // MineChess маршрут
 app.get('/minechess', async (req, res) => {
     const sessionToken = req.cookies?.sessionToken || 

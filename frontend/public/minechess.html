@@ -1,9 +1,24 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <!-- АНТИ-ФЛЕШ: синхронная проверка токена до рендера -->
+    <script>
+        (function() {
+            try {
+                var token = localStorage.getItem('sessionToken');
+                var expires = localStorage.getItem('sessionExpiresAt');
+                if (!token || !expires || new Date() >= new Date(expires)) {
+                    window.location.replace('/login.html');
+                } else {
+                    document.documentElement.style.visibility = 'hidden';
+                }
+            } catch(e) {}
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MineChess | Coffee & AI</title>
+    <link rel="icon" type="image/png" href="/logotip.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -373,73 +388,68 @@
         .stat-row {
             display: flex;
             justify-content: space-between;
-            padding: 12px 0;
+            align-items: center;
+            padding: 8px 0;
             border-bottom: 1px solid var(--glass-border);
         }
 
         .stat-row:last-child { border-bottom: none; }
-
-        .stat-label {
-            color: var(--text-muted);
-            font-size: 14px;
-        }
-
-        .stat-value {
-            color: var(--text-main);
-            font-weight: 600;
-            font-size: 14px;
-        }
+        .stat-label { font-size: 13px; color: var(--text-muted); }
+        .stat-value { font-size: 18px; font-weight: 700; color: var(--accent); }
 
         .mode-selector {
             display: flex;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 10px;
         }
 
         .mode-btn {
-            flex: 1;
-            padding: 12px;
+            padding: 10px 16px;
             background: rgba(255,255,255,0.03);
             border: 1px solid var(--glass-border);
-            border-radius: 50px;
             color: var(--text-muted);
-            font-size: 13px;
-            font-weight: 600;
+            border-radius: 50px;
             cursor: pointer;
+            font-size: 13px;
             transition: all 0.3s ease;
         }
 
         .mode-btn.active {
-            background: rgba(212, 165, 116, 0.15);
-            border-color: var(--accent);
-            color: var(--accent);
+            background: linear-gradient(135deg, var(--accent), var(--accent-glow));
+            color: #0F0A07;
+            border-color: transparent;
+            font-weight: 700;
         }
 
-        .modal {
-            display: none;
+        /* Модальные окна */
+        .modal-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 10, 7, 0.95);
-            backdrop-filter: blur(20px);
-            z-index: 9999;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: flex;
             justify-content: center;
             align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
         }
 
-        .modal.active { display: flex; }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
 
-        .modal-content {
-            max-width: 500px;
-            width: 90%;
-            background: rgba(45, 31, 24, 0.95);
-            backdrop-filter: blur(24px);
+        .modal-card {
+            background: var(--card-bg);
             border: 1px solid var(--glass-border);
-            border-radius: 32px;
+            border-radius: 24px;
             padding: 40px;
+            max-width: 480px;
+            width: 90%;
             text-align: center;
+            box-shadow: var(--card-shadow);
         }
 
         .modal-title {
@@ -448,17 +458,42 @@
             background: linear-gradient(90deg, var(--accent), var(--text-main));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .modal-text {
             color: var(--text-muted);
             font-size: 16px;
             margin-bottom: 30px;
+            line-height: 1.6;
         }
 
-        @media (max-width: 1200px) {
-            .game-layout { grid-template-columns: 1fr; }
+        .guide-modal .modal-card {
+            max-width: 560px;
+            text-align: left;
+        }
+
+        .guide-section {
+            margin-bottom: 20px;
+        }
+
+        .guide-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .guide-section-text {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 1100px) {
+            .game-layout {
+                grid-template-columns: 1fr;
+            }
             .side-panel {
                 width: 100%;
                 grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -560,7 +595,7 @@
                         </tr>
                         <tr>
                             <td style="padding: 8px; text-align: center; font-size: 20px;">♔</td>
-                            <td style="padding: 8px; color: var(--text-muted);" id="refKing">Не может ходить</td>
+                            <td style="padding: 8px; color: var(--text-muted);" id="refKing">Не может наступить</td>
                         </tr>
                     </table>
                 </div>
@@ -568,39 +603,41 @@
         </div>
     </div>
 
-    <div class="modal" id="gameOverModal">
-        <div class="modal-content">
-            <h2 class="modal-title" id="modalTitle">Победа!</h2>
-            <p class="modal-text" id="modalText">Белые одержали победу</p>
+    <!-- Модальное окно победы -->
+    <div class="modal-overlay" id="gameOverModal">
+        <div class="modal-card">
+            <div class="modal-title" id="modalTitle">Игра окончена</div>
+            <div class="modal-text" id="modalText"></div>
             <button class="action-btn" onclick="restartGame()" id="modalBtnRestart">Новая игра</button>
         </div>
     </div>
 
-    <div class="modal" id="guideModal">
-        <div class="modal-content" style="max-width: 600px; text-align: left;">
-            <h2 class="modal-title" id="guideTitle">Правила MineChess</h2>
-            <div style="margin-bottom: 16px;">
-                <h4 style="color: var(--text-main); font-size: 14px; margin-bottom: 6px;" id="guideGoalTitle">🎯 Цель игры</h4>
-                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;" id="guideGoalText">Уничтожить короля противника, избегая мин на поле</p>
+    <!-- Модальное окно правил -->
+    <div class="modal-overlay guide-modal" id="guideModal">
+        <div class="modal-card">
+            <h2 class="modal-title" id="guideTitle" style="text-align:center; margin-bottom: 24px;">Правила MineChess</h2>
+            <div class="guide-section">
+                <div class="guide-section-title" id="guideGoalTitle">🎯 Цель игры</div>
+                <div class="guide-section-text" id="guideGoalText">Уничтожить короля противника, избегая мин</div>
             </div>
-            <div style="margin-bottom: 16px;">
-                <h4 style="color: var(--text-main); font-size: 14px; margin-bottom: 6px;" id="guideMinesTitle">💣 Мины</h4>
-                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;" id="guideMinesText">Размещаются после первого хода. Нельзя ставить на стартовых рядах и клетке первого хода</p>
+            <div class="guide-section">
+                <div class="guide-section-title" id="guideMinesTitle">💣 Мины</div>
+                <div class="guide-section-text" id="guideMinesText">Расставляются после первого хода. Нельзя ставить на стартовых рядах</div>
             </div>
-            <div style="margin-bottom: 16px;">
-                <h4 style="color: var(--text-main); font-size: 14px; margin-bottom: 6px;" id="guideScoutTitle">🔍 Разведка</h4>
-                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;" id="guideScoutText">Вместо хода можно разведать клетку. Каждая фигура имеет свой радиус разведки</p>
+            <div class="guide-section">
+                <div class="guide-section-title" id="guideScoutTitle">🔍 Разведка</div>
+                <div class="guide-section-text" id="guideScoutText">Вместо хода можно разведать клетку. Каждая фигура имеет свой радиус разведки</div>
             </div>
-            <div style="margin-bottom: 16px;">
-                <h4 style="color: var(--text-main); font-size: 14px; margin-bottom: 6px;" id="guideBehaviorTitle">⚔️ Поведение при подрыве</h4>
-                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;" id="guideBehaviorText">Король не может наступить на мину. Конь возвращается. Пешка и слон гибнут. Ладья пропускает ход. Ферзь ослабляется</p>
+            <div class="guide-section">
+                <div class="guide-section-title" id="guideBehaviorTitle">⚔️ Поведение при подрыве</div>
+                <div class="guide-section-text" id="guideBehaviorText">Король не может наступить на мину. Конь возвращается. Пешка и слон гибнут. Ладья пропускает ход. Ферзь ослабляется</div>
             </div>
-            <button class="action-btn" onclick="toggleGuide()" style="margin-top: 20px;" id="guideCloseBtn">Закрыть</button>
+            <button class="action-btn" onclick="toggleGuide()" id="guideCloseBtn" style="margin-top: 16px;">Закрыть</button>
         </div>
     </div>
 
     <script>
-        // ============ LOCALIZATION ============
+        // ============ ПЕРЕВОДЫ ============
         const translations = {
             ru: {
                 backBtn: 'Назад', gameSubtitle: 'Шахматы × Сапёр | Стратегия под вуалью тумана войны',
@@ -610,13 +647,13 @@
                 btnDebug: '🔍 Показать мины (DEBUG)', panelStats: '📊 Статистика',
                 statTotal: 'Всего мин', statFound: 'Найдено мин', statExploded: 'Взорвано', statClosed: 'Закрытых клеток',
                 panelGuide: '📘 Быстрая справка', refPawn: 'Уничтожается', refKnight: 'Возвращается назад',
-                refBishop: 'Уничтожается', refRook: 'Пропускает 1 ход', refQueen: 'Ослабляется на 2 хода', refKing: 'Не может ходить',
-                victoryWhite: '♔ Победа белых!', victoryBlack: '♚ Победа чёрных!',
-                victoryTextWhite: 'Белые одержали победу! Чёрный король уничтожен.',
-                victoryTextBlack: 'Чёрные одержали победу! Белый король уничтожен.',
+                refBishop: 'Уничтожается', refRook: 'Пропускает 1 ход', refQueen: 'Ослабляется на 2 хода', refKing: 'Не может наступить',
+                victoryWhite: '♔ Белые победили!', victoryBlack: '♚ Чёрные победили!',
+                victoryTextWhite: 'Белые победили! Чёрный король уничтожен.',
+                victoryTextBlack: 'Чёрные победили! Белый король уничтожен.',
                 modalBtnRestart: 'Новая игра', guideTitle: 'Правила MineChess',
-                guideGoalTitle: '🎯 Цель игры', guideGoalText: 'Уничтожить короля противника, избегая мин на поле',
-                guideMinesTitle: '💣 Мины', guideMinesText: 'Размещаются после первого хода. Нельзя ставить на стартовых рядах и клетке первого хода',
+                guideGoalTitle: '🎯 Цель игры', guideGoalText: 'Уничтожить короля противника, избегая мин',
+                guideMinesTitle: '💣 Мины', guideMinesText: 'Расставляются после первого хода. Нельзя ставить на стартовых рядах и клетке первого хода',
                 guideScoutTitle: '🔍 Разведка', guideScoutText: 'Вместо хода можно разведать клетку. Каждая фигура имеет свой радиус разведки',
                 guideBehaviorTitle: '⚔️ Поведение при подрыве', guideBehaviorText: 'Король не может наступить на мину. Конь возвращается. Пешка и слон гибнут. Ладья пропускает ход. Ферзь ослабляется',
                 guideCloseBtn: 'Закрыть', damagedPiece: 'Эта фигура повреждена и пропускает ход!'
@@ -688,22 +725,13 @@
         let gameState = {
             currentPlayer: 'white',
             turn: 1,
-            mode: 'move',  // 'move', 'scout', 'flag'
-            
+            mode: 'move',
             board: [],
             pieces: {},
-            
             minesGenerated: false,
             showMines: false,
-            
             selectedPiece: null,
-            
-            stats: {
-                totalMines: 12,
-                foundMines: 0,
-                explodedMines: 0
-            },
-            
+            stats: { totalMines: 12, foundMines: 0, explodedMines: 0 },
             gameOver: false
         };
 
@@ -717,7 +745,6 @@
             createEmptyBoard();
             placePieces();
             openStartRows();
-            
             gameState.currentPlayer = 'white';
             gameState.turn = 1;
             gameState.mode = 'move';
@@ -726,7 +753,6 @@
             gameState.selectedPiece = null;
             gameState.stats = { totalMines: 12, foundMines: 0, explodedMines: 0 };
             gameState.gameOver = false;
-            
             renderBoard();
             updateStats();
             updateTurnIndicator();
@@ -738,13 +764,12 @@
                 gameState.board[row] = [];
                 for (let col = 0; col < 8; col++) {
                     gameState.board[row][col] = {
-                        row: row,
-                        col: col,
+                        row, col,
                         isOpen: false,
                         hasMine: false,
                         minesAround: 0,
                         pieceId: null,
-                        isFlagged: false  // Флажок игрока
+                        isFlagged: false
                     };
                 }
             }
@@ -752,64 +777,38 @@
 
         function placePieces() {
             gameState.pieces = {};
-            
-            // White pieces (row 0, 1)
             const backRowPieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
-            
+
             for (let col = 0; col < 8; col++) {
-                // White back row
-                const whiteBackId = `w_${backRowPieces[col]}_${col < 4 ? 1 : 2}`;
+                const whiteBackId = `w_${backRowPieces[col]}_${col < 4 ? col : 7 - col}`;
                 gameState.pieces[whiteBackId] = {
-                    id: whiteBackId,
-                    type: backRowPieces[col],
-                    color: 'white',
-                    row: 0,
-                    col: col,
-                    alive: true,
-                    hasMoved: false,  // Для рокировки
-                    status: { skipTurns: 0, weakenedTurns: 0, weakenedMode: null }
+                    id: whiteBackId, type: backRowPieces[col], color: 'white',
+                    row: 0, col, alive: true, hasMoved: false,
+                    status: { skipTurns: 0, weakened: false }
                 };
                 gameState.board[0][col].pieceId = whiteBackId;
-                
-                // White pawns
-                const whitePawnId = `w_pawn_${col + 1}`;
+
+                const whitePawnId = `w_pawn_${col}`;
                 gameState.pieces[whitePawnId] = {
-                    id: whitePawnId,
-                    type: 'pawn',
-                    color: 'white',
-                    row: 1,
-                    col: col,
-                    alive: true,
-                    hasMoved: false,
-                    status: { skipTurns: 0, weakenedTurns: 0, weakenedMode: null }
+                    id: whitePawnId, type: 'pawn', color: 'white',
+                    row: 1, col, alive: true, hasMoved: false,
+                    status: { skipTurns: 0, weakened: false }
                 };
                 gameState.board[1][col].pieceId = whitePawnId;
-                
-                // Black pawns
-                const blackPawnId = `b_pawn_${col + 1}`;
+
+                const blackPawnId = `b_pawn_${col}`;
                 gameState.pieces[blackPawnId] = {
-                    id: blackPawnId,
-                    type: 'pawn',
-                    color: 'black',
-                    row: 6,
-                    col: col,
-                    alive: true,
-                    hasMoved: false,
-                    status: { skipTurns: 0, weakenedTurns: 0, weakenedMode: null }
+                    id: blackPawnId, type: 'pawn', color: 'black',
+                    row: 6, col, alive: true, hasMoved: false,
+                    status: { skipTurns: 0, weakened: false }
                 };
                 gameState.board[6][col].pieceId = blackPawnId;
-                
-                // Black back row
-                const blackBackId = `b_${backRowPieces[col]}_${col < 4 ? 1 : 2}`;
+
+                const blackBackId = `b_${backRowPieces[col]}_${col < 4 ? col : 7 - col}`;
                 gameState.pieces[blackBackId] = {
-                    id: blackBackId,
-                    type: backRowPieces[col],
-                    color: 'black',
-                    row: 7,
-                    col: col,
-                    alive: true,
-                    hasMoved: false,  // Для рокировки
-                    status: { skipTurns: 0, weakenedTurns: 0, weakenedMode: null }
+                    id: blackBackId, type: backRowPieces[col], color: 'black',
+                    row: 7, col, alive: true, hasMoved: false,
+                    status: { skipTurns: 0, weakened: false }
                 };
                 gameState.board[7][col].pieceId = blackBackId;
             }
@@ -824,750 +823,143 @@
             }
         }
 
-        // ============ MINES ============
-        function generateMines(firstMoveCell) {
-            const forbiddenCells = new Set();
-            
-            // Стартовые ряды
+        function generateMines(excludeRow, excludeCol) {
+            const forbidden = new Set();
             for (let col = 0; col < 8; col++) {
-                forbiddenCells.add(`0-${col}`);
-                forbiddenCells.add(`1-${col}`);
-                forbiddenCells.add(`6-${col}`);
-                forbiddenCells.add(`7-${col}`);
+                forbidden.add(`0,${col}`); forbidden.add(`1,${col}`);
+                forbidden.add(`6,${col}`); forbidden.add(`7,${col}`);
             }
-            
-            // Клетка первого хода
-            forbiddenCells.add(`${firstMoveCell.row}-${firstMoveCell.col}`);
-            
-            let minesPlaced = 0;
-            while (minesPlaced < gameState.stats.totalMines) {
-                const row = Math.floor(Math.random() * 8);
-                const col = Math.floor(Math.random() * 8);
-                const key = `${row}-${col}`;
-                
-                if (!forbiddenCells.has(key) && !gameState.board[row][col].hasMine) {
-                    gameState.board[row][col].hasMine = true;
-                    minesPlaced++;
+            forbidden.add(`${excludeRow},${excludeCol}`);
+
+            const candidates = [];
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (!forbidden.has(`${row},${col}`)) candidates.push({ row, col });
                 }
             }
-            
-            calculateMineNumbers();
+
+            for (let i = candidates.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+            }
+
+            const mineCount = gameState.stats.totalMines;
+            for (let i = 0; i < mineCount && i < candidates.length; i++) {
+                gameState.board[candidates[i].row][candidates[i].col].hasMine = true;
+            }
+
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (!gameState.board[row][col].hasMine) {
+                        let count = 0;
+                        for (let dr = -1; dr <= 1; dr++) {
+                            for (let dc = -1; dc <= 1; dc++) {
+                                if (dr === 0 && dc === 0) continue;
+                                const nr = row + dr, nc = col + dc;
+                                if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && gameState.board[nr][nc].hasMine) count++;
+                            }
+                        }
+                        gameState.board[row][col].minesAround = count;
+                    }
+                }
+            }
             gameState.minesGenerated = true;
         }
 
-        function calculateMineNumbers() {
-            for (let row = 0; row < 8; row++) {
-                for (let col = 0; col < 8; col++) {
-                    const cell = gameState.board[row][col];
-                    
-                    if (cell.hasMine) {
-                        cell.minesAround = null;
-                        continue;
-                    }
-                    
-                    let count = 0;
-                    
-                    for (let dr = -1; dr <= 1; dr++) {
-                        for (let dc = -1; dc <= 1; dc++) {
-                            if (dr === 0 && dc === 0) continue;
-                            
-                            const r = row + dr;
-                            const c = col + dc;
-                            
-                            if (r < 0 || r >= 8 || c < 0 || c >= 8) continue;
-                            
-                            if (gameState.board[r][c].hasMine) {
-                                count++;
-                            }
-                        }
-                    }
-                    
-                    cell.minesAround = count;
-                }
-            }
-            
-            // DEBUG: показать карту мин
-            console.log('🗺️ Карта мин:');
-            console.table(
-                gameState.board.map(row =>
-                    row.map(c => c.hasMine ? "💣" : c.minesAround)
-                )
-            );
-        }
-
-        function applyMineEffect(piece, fromCell) {
-            gameState.stats.explodedMines++;
-            
-            const cell = gameState.board[piece.row][piece.col];
-            const cellElement = document.querySelector(`[data-row="${piece.row}"][data-col="${piece.col}"]`);
-            if (cellElement) {
-                cellElement.classList.add('exploded');
-            }
-            
-            setTimeout(() => {
-                switch (piece.type) {
-                    case 'pawn':
-                    case 'bishop':
-                        // Уничтожаются
-                        piece.alive = false;
-                        cell.pieceId = null;
-                        break;
-                    
-                    case 'knight':
-                        // Возвращается назад
-                        cell.pieceId = null;
-                        piece.row = fromCell.row;
-                        piece.col = fromCell.col;
-                        gameState.board[fromCell.row][fromCell.col].pieceId = piece.id;
-                        break;
-                    
-                    case 'rook':
-                        // Пропускает следующий ход
-                        piece.status.skipTurns = 1;
-                        break;
-                    
-                    case 'queen':
-                        // Ослабляется на 2 хода
-                        piece.status.weakenedTurns = 2;
-                        piece.status.weakenedMode = Math.random() > 0.5 ? 'straight' : 'diagonal';
-                        break;
-                }
-                
-                endTurn();
-            }, 700);
-        }
-
-        // ============ MOVES ============
-        function canSelectPiece(piece) {
-            if (!piece) return false;
-            if (!piece.alive) return false;
-            if (piece.color !== gameState.currentPlayer) return false;
-            if (piece.status.skipTurns > 0) return false;
-            return true;
-        }
-
-        function makeMove(piece, fromCell, toCell) {
-            // Первый ход - генерация мин
-            if (!gameState.minesGenerated) {
-                generateMines(toCell);
-            }
-            
-            // Перемещение
-            fromCell.pieceId = null;
-            toCell.pieceId = piece.id;
-            piece.row = toCell.row;
-            piece.col = toCell.col;
-            piece.hasMoved = true;  // Помечаем что фигура походила
-            
-            // Открытие клетки
-            openCell(toCell);
-            
-            // Проверка мины
-            if (toCell.hasMine && piece.type !== 'king') {
-                applyMineEffect(piece, fromCell);
-            } else {
-                endTurn();
-            }
-        }
-
-        function openCell(cell) {
-            if (!cell.isOpen) {
-                cell.isOpen = true;
-                if (cell.hasMine) {
-                    gameState.stats.foundMines++;
-                }
-            }
-        }
-
-        function endTurn() {
-            // Уменьшаем счётчики для фигур текущего игрока
-            for (const pieceId in gameState.pieces) {
-                const piece = gameState.pieces[pieceId];
-                if (piece.color === gameState.currentPlayer && piece.alive) {
-                    if (piece.status.skipTurns > 0) {
-                        piece.status.skipTurns--;
-                    }
-                    if (piece.status.weakenedTurns > 0) {
-                        piece.status.weakenedTurns--;
-                        if (piece.status.weakenedTurns === 0) {
-                            piece.status.weakenedMode = null;
-                        }
-                    }
-                }
-            }
-            
-            // Смена игрока
-            gameState.currentPlayer = gameState.currentPlayer === 'white' ? 'black' : 'white';
-            gameState.turn++;
-            gameState.selectedPiece = null;
-            
-            renderBoard();
-            updateStats();
-            updateTurnIndicator();
-            checkGameOver();
-        }
-
-        // ============ SCOUT ============
-        function scoutCell(piece, cell) {
-            openCell(cell);
-            endTurn();
-        }
-
-        function getScoutCells(piece) {
-            const cells = [];
-            const { row, col } = piece;
-            
-            switch (piece.type) {
-                case 'pawn':
-                    const dir = piece.color === 'white' ? 1 : -1;
-                    if (isInBounds(row + dir, col)) {
-                        cells.push(gameState.board[row + dir][col]);
-                    }
-                    break;
-                
-                case 'knight':
-                    const knightMoves = [
-                        [-2, -1], [-2, 1], [-1, -2], [-1, 2],
-                        [1, -2], [1, 2], [2, -1], [2, 1]
-                    ];
-                    for (const [dr, dc] of knightMoves) {
-                        if (isInBounds(row + dr, col + dc)) {
-                            cells.push(gameState.board[row + dr][col + dc]);
-                        }
-                    }
-                    break;
-                
-                case 'bishop':
-                    const bishopDirs = [[1,1], [1,-1], [-1,1], [-1,-1]];
-                    for (const [dr, dc] of bishopDirs) {
-                        let r = row + dr, c = col + dc;
-                        while (isInBounds(r, c)) {
-                            cells.push(gameState.board[r][c]);
-                            if (!gameState.board[r][c].isOpen) break;
-                            r += dr;
-                            c += dc;
-                        }
-                    }
-                    break;
-                
-                case 'rook':
-                    const rookDirs = [[1,0], [-1,0], [0,1], [0,-1]];
-                    for (const [dr, dc] of rookDirs) {
-                        let r = row + dr, c = col + dc;
-                        while (isInBounds(r, c)) {
-                            cells.push(gameState.board[r][c]);
-                            if (!gameState.board[r][c].isOpen) break;
-                            r += dr;
-                            c += dc;
-                        }
-                    }
-                    break;
-                
-                case 'queen':
-                    const queenDirs = [[1,1], [1,-1], [-1,1], [-1,-1], [1,0], [-1,0], [0,1], [0,-1]];
-                    for (const [dr, dc] of queenDirs) {
-                        let r = row + dr, c = col + dc;
-                        while (isInBounds(r, c)) {
-                            cells.push(gameState.board[r][c]);
-                            if (!gameState.board[r][c].isOpen) break;
-                            r += dr;
-                            c += dc;
-                        }
-                    }
-                    break;
-                
-                case 'king':
-                    for (let dr = -1; dr <= 1; dr++) {
-                        for (let dc = -1; dc <= 1; dc++) {
-                            if (dr === 0 && dc === 0) continue;
-                            if (isInBounds(row + dr, col + dc)) {
-                                cells.push(gameState.board[row + dr][col + dc]);
-                            }
-                        }
-                    }
-                    break;
-            }
-            
-            return cells;
-        }
-
-        // ============ RULES ============
-        function getValidMoves(piece) {
-            const moves = [];
-            
-            switch (piece.type) {
-                case 'pawn':
-                    moves.push(...getPawnMoves(piece));
-                    break;
-                case 'knight':
-                    moves.push(...getKnightMoves(piece));
-                    break;
-                case 'bishop':
-                    moves.push(...getBishopMoves(piece));
-                    break;
-                case 'rook':
-                    moves.push(...getRookMoves(piece));
-                    break;
-                case 'queen':
-                    moves.push(...getQueenMoves(piece));
-                    break;
-                case 'king':
-                    moves.push(...getKingMoves(piece));
-                    break;
-            }
-            
-            return moves;
-        }
-
-        function getPawnMoves(piece) {
-            const moves = [];
-            const { row, col, color } = piece;
-            const dir = color === 'white' ? 1 : -1;
-            const startRow = color === 'white' ? 1 : 6;
-            
-            // Вперёд
-            if (isInBounds(row + dir, col)) {
-                const cell = gameState.board[row + dir][col];
-                if (!cell.pieceId) {
-                    moves.push(cell);
-                    
-                    // Двойной ход со старта
-                    if (row === startRow) {
-                        const cell2 = gameState.board[row + 2 * dir][col];
-                        if (!cell2.pieceId) {
-                            moves.push(cell2);
-                        }
-                    }
-                }
-            }
-            
-            // Взятие по диагонали
-            for (const dc of [-1, 1]) {
-                if (isInBounds(row + dir, col + dc)) {
-                    const cell = gameState.board[row + dir][col + dc];
-                    if (cell.pieceId) {
-                        const targetPiece = gameState.pieces[cell.pieceId];
-                        if (targetPiece && targetPiece.color !== color) {
-                            moves.push(cell);
-                        }
-                    }
-                }
-            }
-            
-            return moves;
-        }
-
-        function getKnightMoves(piece) {
-            const moves = [];
-            const { row, col, color } = piece;
-            const knightMoves = [
-                [-2, -1], [-2, 1], [-1, -2], [-1, 2],
-                [1, -2], [1, 2], [2, -1], [2, 1]
-            ];
-            
-            for (const [dr, dc] of knightMoves) {
-                if (isInBounds(row + dr, col + dc)) {
-                    const cell = gameState.board[row + dr][col + dc];
-                    if (!cell.pieceId) {
-                        moves.push(cell);
-                    } else {
-                        const targetPiece = gameState.pieces[cell.pieceId];
-                        if (targetPiece && targetPiece.color !== color) {
-                            moves.push(cell);
-                        }
-                    }
-                }
-            }
-            
-            return moves;
-        }
-
-        function getBishopMoves(piece) {
-            return getSlidingMoves(piece, [[1,1], [1,-1], [-1,1], [-1,-1]]);
-        }
-
-        function getRookMoves(piece) {
-            return getSlidingMoves(piece, [[1,0], [-1,0], [0,1], [0,-1]]);
-        }
-
-        function getQueenMoves(piece) {
-            // Проверка ослабления
-            if (piece.status.weakenedTurns > 0) {
-                if (piece.status.weakenedMode === 'diagonal') {
-                    return getRookMoves(piece);
-                } else {
-                    return getBishopMoves(piece);
-                }
-            }
-            
-            return getSlidingMoves(piece, [
-                [1,1], [1,-1], [-1,1], [-1,-1],
-                [1,0], [-1,0], [0,1], [0,-1]
-            ]);
-        }
-
-        function getKingMoves(piece) {
-            const moves = [];
-            const { row, col, color } = piece;
-            
-            // Обычные ходы короля
-            for (let dr = -1; dr <= 1; dr++) {
-                for (let dc = -1; dc <= 1; dc++) {
-                    if (dr === 0 && dc === 0) continue;
-                    if (isInBounds(row + dr, col + dc)) {
-                        const cell = gameState.board[row + dr][col + dc];
-                        
-                        // Король НЕ МОЖЕТ наступить на открытую мину
-                        if (cell.isOpen && cell.hasMine) continue;
-                        
-                        if (!cell.pieceId) {
-                            moves.push(cell);
-                        } else {
-                            const targetPiece = gameState.pieces[cell.pieceId];
-                            if (targetPiece && targetPiece.color !== color) {
-                                moves.push(cell);
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // ОШИБКА #6: Рокировка - отдельный тип хода
-            if (canCastle(piece, 'short')) {
-                moves.push({
-                    row: row,
-                    col: 6,
-                    type: 'castle-short'
-                });
-            }
-            
-            if (canCastle(piece, 'long')) {
-                moves.push({
-                    row: row,
-                    col: 2,
-                    type: 'castle-long'
-                });
-            }
-            
-            return moves;
-        }
-
-        function getSlidingMoves(piece, directions) {
-            const moves = [];
-            const { row, col, color } = piece;
-            
-            for (const [dr, dc] of directions) {
-                let r = row + dr;
-                let c = col + dc;
-                
-                while (isInBounds(r, c)) {
-                    const cell = gameState.board[r][c];
-                    
-                    if (!cell.pieceId) {
-                        moves.push(cell);
-                    } else {
-                        const targetPiece = gameState.pieces[cell.pieceId];
-                        if (targetPiece && targetPiece.color !== color) {
-                            moves.push(cell);
-                        }
-                        break;
-                    }
-                    
-                    r += dr;
-                    c += dc;
-                }
-            }
-            
-            return moves;
-        }
-
-        function isInBounds(row, col) {
-            return row >= 0 && row < 8 && col >= 0 && col < 8;
-        }
-
-        // ============ CASTLING (РОКИРОВКА) ============
-        function getPieceAt(row, col) {
-            const cell = gameState.board[row][col];
-            if (!cell.pieceId) return null;
-            return gameState.pieces[cell.pieceId];
-        }
-
-        function isSquareAttacked(row, col, kingColor) {
-            // Проверяем, атакуется ли клетка фигурами противника
-            const opponentColor = kingColor === 'white' ? 'black' : 'white';
-            
-            for (const pieceId in gameState.pieces) {
-                const piece = gameState.pieces[pieceId];
-                if (!piece.alive || piece.color !== opponentColor) continue;
-                
-                const moves = getValidMoves(piece);
-                if (moves.some(m => m.row === row && m.col === col)) {
-                    return true;
-                }
-            }
-            
-            return false;
-        }
-
-        function isKingInCheck(king) {
-            return isSquareAttacked(king.row, king.col, king.color);
-        }
-
-        function canCastle(king, side) {
-            if (king.hasMoved) return false;
-            if (isKingInCheck(king)) return false;
-            
-            const row = king.row;
-            const rookCol = side === 'short' ? 7 : 0;
-            const rookCell = gameState.board[row][rookCol];
-            
-            // ОШИБКА #7: Правильный доступ через board
-            if (!rookCell.pieceId) return false;
-            
-            const rook = gameState.pieces[rookCell.pieceId];
-            if (rook.type !== 'rook' || rook.hasMoved) return false;
-            
-            // ОШИБКА #3: Проверяем только клетки пути короля
-            const path = side === 'short' ? [5, 6] : [3, 2];
-            
-            for (const col of path) {
-                // Клетка должна быть пустой
-                if (gameState.board[row][col].pieceId) return false;
-                
-                // ОШИБКА #2: Проверки ДО движения
-                if (isSquareAttacked(row, col, king.color)) return false;
-                
-                // ОШИБКА #5: MineChess - запрет только на ОТКРЫТЫЕ мины
-                if (gameState.board[row][col].isOpen && gameState.board[row][col].hasMine) return false;
-            }
-            
-            return true;
-        }
-
-        function doCastle(king, side) {
-            const row = king.row;
-            const fromKingCell = gameState.board[row][king.col];
-            
-            if (side === 'short') {
-                // Короткая рокировка O-O
-                const rookCell = gameState.board[row][7];
-                const rook = gameState.pieces[rookCell.pieceId];  // Через board!
-                
-                // Двигаем короля e1 → g1
-                fromKingCell.pieceId = null;
-                gameState.board[row][6].pieceId = king.id;
-                king.row = row;
-                king.col = 6;
-                king.hasMoved = true;  // ОШИБКА #1
-                
-                // Двигаем ладью h1 → f1
-                rookCell.pieceId = null;
-                gameState.board[row][5].pieceId = rook.id;
-                rook.row = row;
-                rook.col = 5;
-                rook.hasMoved = true;  // ОШИБКА #1
-            } else {
-                // Длинная рокировка O-O-O
-                const rookCell = gameState.board[row][0];
-                const rook = gameState.pieces[rookCell.pieceId];  // Через board!
-                
-                // Двигаем короля e1 → c1
-                fromKingCell.pieceId = null;
-                gameState.board[row][2].pieceId = king.id;
-                king.row = row;
-                king.col = 2;
-                king.hasMoved = true;  // ОШИБКА #1
-                
-                // Двигаем ладью a1 → d1
-                rookCell.pieceId = null;
-                gameState.board[row][3].pieceId = rook.id;
-                rook.row = row;
-                rook.col = 3;
-                rook.hasMoved = true;  // ОШИБКА #1
-            }
-            
-            // Открываем клетку куда встал король
-            openCell(gameState.board[king.row][king.col]);
-            
-            // ОШИБКА #2: endTurn вызывается ПОСЛЕ всех действий
-            endTurn();
-        }
-
-        function checkGameOver() {
-            let whiteKingAlive = false;
-            let blackKingAlive = false;
-            
-            for (const pieceId in gameState.pieces) {
-                const piece = gameState.pieces[pieceId];
-                if (piece.type === 'king' && piece.alive) {
-                    if (piece.color === 'white') whiteKingAlive = true;
-                    if (piece.color === 'black') blackKingAlive = true;
-                }
-            }
-            
-            if (!whiteKingAlive) {
-                endGame('black');
-            } else if (!blackKingAlive) {
-                endGame('white');
-            }
-        }
-
-        function endGame(winner) {
-            gameState.gameOver = true;
-            
-            const modal = document.getElementById('gameOverModal');
-            const title = document.getElementById('modalTitle');
-            const text = document.getElementById('modalText');
-            const t = translations[currentLang];
-            
-            title.textContent = winner === 'white' ? t.victoryWhite : t.victoryBlack;
-            text.textContent = winner === 'white' ? t.victoryTextWhite : t.victoryTextBlack;
-            
-            modal.classList.add('active');
-        }
-
-        // ============ RENDER ============
+        // ============ RENDERING ============
         function renderBoard() {
             const boardElement = document.getElementById('chessBoard');
             boardElement.innerHTML = '';
-            
+
             for (let row = 7; row >= 0; row--) {
                 for (let col = 0; col < 8; col++) {
                     const cell = gameState.board[row][col];
                     const cellDiv = document.createElement('div');
-                    
-                    cellDiv.className = 'cell';
-                    cellDiv.className += (row + col) % 2 === 0 ? ' white' : ' black';
+                    cellDiv.className = 'cell ' + ((row + col) % 2 === 0 ? 'white' : 'black');
                     cellDiv.dataset.row = row;
                     cellDiv.dataset.col = col;
-                    
-                    // Закрытая клетка
-                    if (!cell.isOpen) {
-                        cellDiv.classList.add('closed');
-                    }
-                    
-                    // Флажок (всегда виден поверх всего!)
+
+                    if (!cell.isOpen) cellDiv.classList.add('closed');
+
                     if (cell.isFlagged) {
                         cellDiv.classList.add('flagged');
-                    }
-                    
-                    // Число мин - КРИТИЧНО: показываем ВСЕГДА на открытых клетках!
-                    if (cell.isOpen && cell.minesAround > 0) {
-                        cellDiv.classList.add('mine-number', `n${cell.minesAround}`);
-                    }
-                    
-                    // DEBUG: показать мины
-                    if (gameState.showMines && cell.hasMine) {
+                    } else if (gameState.showMines && cell.hasMine && cell.isOpen) {
+                        cellDiv.classList.add('show-mine');
+                    } else if (gameState.showMines && cell.hasMine && !cell.isOpen) {
                         cellDiv.classList.add('show-mine');
                     }
-                    
-                    // Фигура
-                    if (cell.pieceId) {
-                        const piece = gameState.pieces[cell.pieceId];
-                        if (piece && piece.alive) {
-                            cellDiv.textContent = PIECE_SYMBOLS[piece.color][piece.type];
-                            cellDiv.classList.add(`piece-${piece.color}`);
-                            
-                            // Статус фигуры
-                            if (piece.status.skipTurns > 0) {
-                                cellDiv.classList.add('damaged');
-                            }
-                            if (piece.status.weakenedTurns > 0) {
-                                cellDiv.classList.add('weakened');
-                            }
-                            
-                            // Нельзя выбрать
-                            if (!canSelectPiece(piece)) {
-                                cellDiv.classList.add('disabled');
-                            }
-                        }
+
+                    if (cell.isOpen && cell.minesAround > 0 && !cell.hasMine) {
+                        cellDiv.classList.add('mine-number', `n${cell.minesAround}`);
                     }
-                    
-                    cellDiv.onclick = () => handleCellClick(row, col);
+
+                    if (cell.pieceId && gameState.pieces[cell.pieceId]?.alive) {
+                        const piece = gameState.pieces[cell.pieceId];
+                        cellDiv.textContent = PIECE_SYMBOLS[piece.color][piece.type];
+                        cellDiv.classList.add(`piece-${piece.color}`);
+                        if (piece.status.skipTurns > 0) cellDiv.classList.add('damaged');
+                        if (piece.status.weakened) cellDiv.classList.add('weakened');
+                    }
+
+                    cellDiv.addEventListener('click', () => handleCellClick(row, col));
                     boardElement.appendChild(cellDiv);
                 }
             }
         }
 
+        // ============ CLICK HANDLING ============
         function handleCellClick(row, col) {
             if (gameState.gameOver) return;
-            
             const cell = gameState.board[row][col];
-            
-            if (gameState.mode === 'move') {
-                handleMoveMode(cell);
-            } else if (gameState.mode === 'scout') {
-                handleScoutMode(cell);
-            } else if (gameState.mode === 'flag') {
+
+            if (gameState.mode === 'flag') {
                 handleFlagMode(cell);
+                return;
             }
+            if (gameState.mode === 'scout') {
+                handleScoutMode(cell);
+                return;
+            }
+            handleMoveMode(cell);
         }
 
         function handleFlagMode(cell) {
-            // Можно ставить флажки только на закрытые клетки
-            if (!cell.isOpen && !cell.pieceId) {
-                cell.isFlagged = !cell.isFlagged;  // Переключаем
+            if (!cell.isOpen) {
+                cell.isFlagged = !cell.isFlagged;
+                if (cell.isFlagged && cell.hasMine) gameState.stats.foundMines++;
+                else if (!cell.isFlagged && cell.hasMine) gameState.stats.foundMines--;
+                updateStats();
                 renderBoard();
             }
         }
 
         function handleMoveMode(cell) {
             if (gameState.selectedPiece) {
-                // Уже выбрана фигура - пытаемся сделать ход
                 const piece = gameState.pieces[gameState.selectedPiece];
                 const fromCell = gameState.board[piece.row][piece.col];
                 const validMoves = getValidMoves(piece);
-                
-                // Находим ход, который соответствует кликнутой клетке
                 const move = validMoves.find(m => m.row === cell.row && m.col === cell.col);
-                
+
                 if (move) {
-                    // ЗАПРЕТ: нельзя ходить на флажки (игрок пометил как мину)
-                    if (cell.isFlagged) {
-                        gameState.selectedPiece = null;
-                        renderBoard();
-                        return;
-                    }
-                    
-                    // ЗАПРЕТ: король не может на открытую мину
                     if (piece.type === 'king' && cell.isOpen && cell.hasMine) {
                         gameState.selectedPiece = null;
                         renderBoard();
                         return;
                     }
-                    
-                    // Рокировка
-                    if (move.type === 'castle-short') {
-                        doCastle(piece, 'short');
-                        gameState.selectedPiece = null;
-                        renderBoard();
-                        return;
-                    }
-                    if (move.type === 'castle-long') {
-                        doCastle(piece, 'long');
-                        gameState.selectedPiece = null;
-                        renderBoard();
-                        return;
-                    }
-                    
-                    // Обычный ход
+                    if (move.type === 'castle-short') { doCastle(piece, 'short'); gameState.selectedPiece = null; renderBoard(); return; }
+                    if (move.type === 'castle-long') { doCastle(piece, 'long'); gameState.selectedPiece = null; renderBoard(); return; }
                     makeMove(piece, fromCell, cell);
                 } else {
                     gameState.selectedPiece = null;
                     renderBoard();
                 }
             } else {
-                // Выбираем фигуру
                 if (cell.pieceId) {
                     const piece = gameState.pieces[cell.pieceId];
-                    
                     if (!canSelectPiece(piece)) {
-                        if (piece.status.skipTurns > 0) {
-                            alert(translations[currentLang].damagedPiece);
-                        }
+                        if (piece.status.skipTurns > 0) alert(translations[currentLang].damagedPiece);
                         return;
                     }
-                    
                     gameState.selectedPiece = piece.id;
                     highlightMoves(piece);
                 }
@@ -1576,10 +968,8 @@
 
         function handleScoutMode(cell) {
             if (gameState.selectedPiece) {
-                // Выбрана фигура - разведываем
                 const piece = gameState.pieces[gameState.selectedPiece];
                 const scoutCells = getScoutCells(piece);
-                
                 if (scoutCells.some(c => c.row === cell.row && c.col === cell.col)) {
                     scoutCell(piece, cell);
                 } else {
@@ -1587,37 +977,265 @@
                     renderBoard();
                 }
             } else {
-                // Выбираем фигуру для разведки
                 if (cell.pieceId) {
                     const piece = gameState.pieces[cell.pieceId];
-                    
                     if (!canSelectPiece(piece)) {
-                        if (piece.status.skipTurns > 0) {
-                            alert(translations[currentLang].damagedPiece);
-                        }
+                        if (piece.status.skipTurns > 0) alert(translations[currentLang].damagedPiece);
                         return;
                     }
-                    
                     gameState.selectedPiece = piece.id;
                     highlightScoutArea(piece);
                 }
             }
         }
 
+        function canSelectPiece(piece) {
+            return piece.alive && piece.color === gameState.currentPlayer && piece.status.skipTurns === 0;
+        }
+
+        // ============ MOVES ============
+        function getValidMoves(piece) {
+            const moves = [];
+            const { row, col, type, color } = piece;
+            const enemy = color === 'white' ? 'black' : 'white';
+
+            function addMove(r, c, t = 'normal') {
+                if (r < 0 || r > 7 || c < 0 || c > 7) return false;
+                const cell = gameState.board[r][c];
+                if (cell.pieceId && gameState.pieces[cell.pieceId]?.color === color) return false;
+                moves.push({ row: r, col: c, type: t });
+                return !cell.pieceId;
+            }
+
+            if (type === 'pawn') {
+                const dir = color === 'white' ? 1 : -1;
+                const startRow = color === 'white' ? 1 : 6;
+                const nr = row + dir;
+                if (nr >= 0 && nr <= 7 && !gameState.board[nr][col].pieceId) {
+                    moves.push({ row: nr, col, type: 'normal' });
+                    if (row === startRow && !gameState.board[row + 2 * dir][col].pieceId) {
+                        moves.push({ row: row + 2 * dir, col, type: 'normal' });
+                    }
+                }
+                for (const dc of [-1, 1]) {
+                    const nc = col + dc;
+                    if (nc >= 0 && nc <= 7 && nr >= 0 && nr <= 7) {
+                        const target = gameState.board[nr][nc];
+                        if (target.pieceId && gameState.pieces[target.pieceId]?.color === enemy) {
+                            moves.push({ row: nr, col: nc, type: 'normal' });
+                        }
+                    }
+                }
+            } else if (type === 'knight') {
+                for (const [dr, dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]) {
+                    addMove(row + dr, col + dc);
+                }
+            } else if (type === 'bishop') {
+                for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+                    for (let i = 1; i < 8; i++) { if (!addMove(row + dr*i, col + dc*i)) break; }
+                }
+            } else if (type === 'rook') {
+                for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+                    for (let i = 1; i < 8; i++) { if (!addMove(row + dr*i, col + dc*i)) break; }
+                }
+            } else if (type === 'queen') {
+                for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+                    for (let i = 1; i < 8; i++) { if (!addMove(row + dr*i, col + dc*i)) break; }
+                }
+            } else if (type === 'king') {
+                for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+                    addMove(row + dr, col + dc);
+                }
+                if (!piece.hasMoved) {
+                    if (canCastle(piece, 'short')) moves.push({ row, col: col + 2, type: 'castle-short' });
+                    if (canCastle(piece, 'long')) moves.push({ row, col: col - 2, type: 'castle-long' });
+                }
+            }
+            return moves;
+        }
+
+        function canCastle(king, side) {
+            if (king.hasMoved) return false;
+            const row = king.row;
+            const rookCol = side === 'short' ? 7 : 0;
+            const rookCell = gameState.board[row][rookCol];
+            if (!rookCell.pieceId) return false;
+            const rook = gameState.pieces[rookCell.pieceId];
+            if (rook.type !== 'rook' || rook.hasMoved) return false;
+            const path = side === 'short' ? [5, 6] : [3, 2];
+            for (const c of path) {
+                if (gameState.board[row][c].pieceId) return false;
+                if (gameState.board[row][c].isOpen && gameState.board[row][c].hasMine) return false;
+            }
+            return true;
+        }
+
+        function makeMove(piece, fromCell, toCell) {
+            if (!gameState.minesGenerated && gameState.turn === 1 && piece.color === 'white') {
+                generateMines(toCell.row, toCell.col);
+            }
+
+            if (toCell.pieceId) {
+                const captured = gameState.pieces[toCell.pieceId];
+                captured.alive = false;
+                toCell.pieceId = null;
+            }
+
+            fromCell.pieceId = null;
+            toCell.pieceId = piece.id;
+            piece.row = toCell.row;
+            piece.col = toCell.col;
+            piece.hasMoved = true;
+
+            openCell(toCell);
+
+            if (toCell.hasMine && !toCell.isFlagged) {
+                handleMineHit(piece, toCell);
+            }
+
+            checkGameOver();
+            if (!gameState.gameOver) endTurn();
+
+            gameState.selectedPiece = null;
+            renderBoard();
+            updateStats();
+        }
+
+        function handleMineHit(piece, cell) {
+            cell.hasMine = false;
+            gameState.stats.explodedMines++;
+
+            const explodedDiv = document.querySelector(`[data-row="${cell.row}"][data-col="${cell.col}"]`);
+            if (explodedDiv) explodedDiv.classList.add('exploded');
+
+            if (piece.type === 'pawn' || piece.type === 'bishop') {
+                piece.alive = false;
+                cell.pieceId = null;
+            } else if (piece.type === 'knight') {
+                const prevCell = gameState.board[piece.row][piece.col];
+                cell.pieceId = null;
+                const backRow = piece.color === 'white' ? piece.row - 1 : piece.row + 1;
+                if (backRow >= 0 && backRow <= 7) {
+                    piece.row = backRow;
+                    gameState.board[backRow][piece.col].pieceId = piece.id;
+                } else {
+                    piece.alive = false;
+                }
+            } else if (piece.type === 'rook') {
+                piece.status.skipTurns = 1;
+            } else if (piece.type === 'queen') {
+                piece.status.weakened = true;
+                piece.status.skipTurns = 2;
+            } else if (piece.type === 'king') {
+                piece.alive = false;
+                cell.pieceId = null;
+            }
+        }
+
+        function openCell(cell) {
+            cell.isOpen = true;
+        }
+
+        function endTurn() {
+            gameState.currentPlayer = gameState.currentPlayer === 'white' ? 'black' : 'white';
+            gameState.turn++;
+
+            for (const id in gameState.pieces) {
+                const p = gameState.pieces[id];
+                if (!p.alive) continue;
+                if (p.color === gameState.currentPlayer) {
+                    if (p.status.skipTurns > 0) p.status.skipTurns--;
+                    if (p.status.skipTurns === 0 && p.status.weakened) p.status.weakened = false;
+                }
+            }
+
+            updateTurnIndicator();
+        }
+
+        function checkGameOver() {
+            let whiteKingAlive = false, blackKingAlive = false;
+            for (const id in gameState.pieces) {
+                const p = gameState.pieces[id];
+                if (p.type === 'king' && p.alive) {
+                    if (p.color === 'white') whiteKingAlive = true;
+                    if (p.color === 'black') blackKingAlive = true;
+                }
+            }
+            if (!whiteKingAlive) endGame('black');
+            else if (!blackKingAlive) endGame('white');
+        }
+
+        function endGame(winner) {
+            gameState.gameOver = true;
+            const modal = document.getElementById('gameOverModal');
+            const t = translations[currentLang];
+            document.getElementById('modalTitle').textContent = winner === 'white' ? t.victoryWhite : t.victoryBlack;
+            document.getElementById('modalText').textContent = winner === 'white' ? t.victoryTextWhite : t.victoryTextBlack;
+            modal.classList.add('active');
+        }
+
+        // ============ SCOUT ============
+        function getScoutCells(piece) {
+            const cells = [];
+            const ranges = { pawn: 1, knight: 2, bishop: 2, rook: 3, queen: 4, king: 1 };
+            const range = ranges[piece.type] || 1;
+            for (let dr = -range; dr <= range; dr++) {
+                for (let dc = -range; dc <= range; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const nr = piece.row + dr, nc = piece.col + dc;
+                    if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && !gameState.board[nr][nc].isOpen) {
+                        cells.push(gameState.board[nr][nc]);
+                    }
+                }
+            }
+            return cells;
+        }
+
+        function scoutCell(piece, cell) {
+            cell.isOpen = true;
+            if (cell.hasMine) gameState.stats.foundMines++;
+            endTurn();
+            gameState.selectedPiece = null;
+            renderBoard();
+            updateStats();
+        }
+
+        // ============ CASTLE ============
+        function doCastle(king, side) {
+            const row = king.row;
+            const fromKingCell = gameState.board[row][king.col];
+            if (side === 'short') {
+                const rookCell = gameState.board[row][7];
+                const rook = gameState.pieces[rookCell.pieceId];
+                fromKingCell.pieceId = null;
+                gameState.board[row][6].pieceId = king.id;
+                king.row = row; king.col = 6; king.hasMoved = true;
+                rookCell.pieceId = null;
+                gameState.board[row][5].pieceId = rook.id;
+                rook.row = row; rook.col = 5; rook.hasMoved = true;
+            } else {
+                const rookCell = gameState.board[row][0];
+                const rook = gameState.pieces[rookCell.pieceId];
+                fromKingCell.pieceId = null;
+                gameState.board[row][2].pieceId = king.id;
+                king.row = row; king.col = 2; king.hasMoved = true;
+                rookCell.pieceId = null;
+                gameState.board[row][3].pieceId = rook.id;
+                rook.row = row; rook.col = 3; rook.hasMoved = true;
+            }
+            openCell(gameState.board[king.row][king.col]);
+            endTurn();
+        }
+
+        // ============ HIGHLIGHT ============
         function highlightMoves(piece) {
             renderBoard();
-            
             const cellDiv = document.querySelector(`[data-row="${piece.row}"][data-col="${piece.col}"]`);
             cellDiv.classList.add('selected');
-            
             const validMoves = getValidMoves(piece);
             validMoves.forEach(cell => {
                 const moveDiv = document.querySelector(`[data-row="${cell.row}"][data-col="${cell.col}"]`);
-                
-                // Запрет на ходы:
-                // 1. Король не может на открытую мину
-                // 2. НИКТО не может на флажок (игрок пометил как мину!)
-                if ((piece.type === 'king' && cell.isOpen && cell.hasMine) || cell.isFlagged) {
+                if ((piece.type === 'king' && gameState.board[cell.row][cell.col].isOpen && gameState.board[cell.row][cell.col].hasMine) || gameState.board[cell.row][cell.col].isFlagged) {
                     moveDiv.classList.add('forbidden');
                 } else {
                     moveDiv.classList.add('highlighted');
@@ -1627,10 +1245,8 @@
 
         function highlightScoutArea(piece) {
             renderBoard();
-            
             const cellDiv = document.querySelector(`[data-row="${piece.row}"][data-col="${piece.col}"]`);
             cellDiv.classList.add('selected');
-            
             const scoutCells = getScoutCells(piece);
             scoutCells.forEach(cell => {
                 const scoutDiv = document.querySelector(`[data-row="${cell.row}"][data-col="${cell.col}"]`);
@@ -1638,34 +1254,26 @@
             });
         }
 
+        // ============ STATS ============
         function updateStats() {
             document.getElementById('totalMines').textContent = gameState.stats.totalMines;
             document.getElementById('foundMines').textContent = gameState.stats.foundMines;
             document.getElementById('explodedMines').textContent = gameState.stats.explodedMines;
-            
             let closedCount = 0;
-            for (let row = 0; row < 8; row++) {
-                for (let col = 0; col < 8; col++) {
-                    if (!gameState.board[row][col].isOpen) closedCount++;
-                }
-            }
+            for (let row = 0; row < 8; row++) for (let col = 0; col < 8; col++) if (!gameState.board[row][col].isOpen) closedCount++;
             document.getElementById('closedCells').textContent = closedCount;
         }
 
         function updateTurnIndicator() {
-            const indicator = document.getElementById('turnIndicator');
             const t = translations[currentLang];
-            indicator.textContent = gameState.currentPlayer === 'white' ? t.turnWhite : t.turnBlack;
+            document.getElementById('turnIndicator').textContent = gameState.currentPlayer === 'white' ? t.turnWhite : t.turnBlack;
         }
 
-        // ============ GAME ============
         function setMode(mode) {
             gameState.mode = mode;
             gameState.selectedPiece = null;
-            
             document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-            
             renderBoard();
         }
 
@@ -1684,10 +1292,41 @@
             renderBoard();
         }
 
-        // Запуск игры
+        // ============ ЗАПУСК ============
         lucide.createIcons();
         updateTranslations();
         initGame();
+
+        // АНТИ-ФЛЕШ: проверка сессии + показ страницы
+        (async function() {
+            const token = localStorage.getItem('sessionToken');
+            try {
+                const response = await fetch('/access/status', {
+                    headers: { 'X-Session-Token': token }
+                });
+                const data = await response.json();
+                if (!data.authenticated) {
+                    localStorage.removeItem('sessionToken');
+                    localStorage.removeItem('sessionExpiresAt');
+                    window.location.replace('/login.html');
+                    return;
+                }
+            } catch(e) {
+                // При ошибке сети не редиректим
+            }
+            document.documentElement.style.visibility = '';
+        })();
+
+        // Отключаем bfcache — при нажатии "Назад" перепроверяем
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                const token = localStorage.getItem('sessionToken');
+                const expires = localStorage.getItem('sessionExpiresAt');
+                if (!token || !expires || new Date() >= new Date(expires)) {
+                    window.location.replace('/login.html');
+                }
+            }
+        });
     </script>
 </body>
 </html>
